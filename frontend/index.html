@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conference Hall Reservation</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>Conference Hall Reservation</h1>
+      <p>Book halls for meetings, talks, and internal events.</p>
+    </header>
+
+    <section id="auth-card" class="card">
+      <div class="tabs">
+        <button id="tab-login" class="tab active" type="button">Login</button>
+        <button id="tab-register" class="tab" type="button">Register</button>
+      </div>
+
+      <form id="login-form" class="form">
+        <label>Email
+          <input type="email" id="login-email" required />
+        </label>
+        <label>Password
+          <input type="password" id="login-password" minlength="8" required />
+        </label>
+        <button type="submit">Login</button>
+      </form>
+
+      <form id="register-form" class="form hidden">
+        <label>Full Name
+          <input type="text" id="register-name" required />
+        </label>
+        <label>Email
+          <input type="email" id="register-email" required />
+        </label>
+        <label>Password
+          <input type="password" id="register-password" minlength="8" required />
+        </label>
+        <button type="submit">Create Account</button>
+      </form>
+
+      <p id="auth-message" class="message"></p>
+    </section>
+
+    <section id="app-card" class="hidden">
+      <div class="toolbar card">
+        <div>
+          <h2 id="welcome-text">Welcome</h2>
+          <p>Choose a hall and create your reservation.</p>
+        </div>
+        <button id="logout-btn" type="button" class="secondary">Logout</button>
+      </div>
+
+      <div class="layout">
+        <article class="card">
+          <h3>Available Halls</h3>
+          <div id="hall-list" class="hall-list"></div>
+        </article>
+
+        <article class="card">
+          <h3>Create Reservation</h3>
+          <form id="reservation-form" class="form">
+            <label>Hall
+              <select id="reservation-hall" required></select>
+            </label>
+            <label>Date
+              <input type="date" id="reservation-date" required />
+            </label>
+            <div class="split">
+              <label>Start Time
+                <input type="time" id="reservation-start" required />
+              </label>
+              <label>End Time
+                <input type="time" id="reservation-end" required />
+              </label>
+            </div>
+            <div class="split">
+              <label>Attendees
+                <input type="number" id="reservation-attendees" min="1" required />
+              </label>
+              <label>Purpose
+                <input type="text" id="reservation-purpose" required />
+              </label>
+            </div>
+            <button type="submit">Reserve Hall</button>
+          </form>
+          <p id="reservation-message" class="message"></p>
+        </article>
+      </div>
+
+      <article class="card">
+        <h3>My Reservations</h3>
+        <ul id="reservation-list" class="reservation-list"></ul>
+      </article>
+    </section>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
