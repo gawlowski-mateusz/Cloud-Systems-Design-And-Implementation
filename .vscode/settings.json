@@ -1,0 +1,22 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^echo 'CREATE DATABASE \"cloud-systems-design-and-implementation\";' \\| docker exec -i backend-db-1 psql -U postgres$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location \"c:\\\\Users\\\\mateu\\\\Documents\\\\Projects\\\\Go_Projects\\\\Cloud-Systems-Design-And-Implementation\\\\backend\"; go mod tidy; go build \\./\\.\\.\\.$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location \"c:\\\\Users\\\\mateu\\\\Documents\\\\Projects\\\\Go_Projects\\\\Cloud-Systems-Design-And-Implementation\\\\backend\"; go build \\./\\.\\.\\.$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^if \\(Get-Command node -ErrorAction SilentlyContinue\\) \\{ node --check \\.\\\\frontend\\\\app\\.js \\} else \\{ Write-Output \"node-not-installed\" \\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "gofmt": true,
+        "go": true
+    }
+}
