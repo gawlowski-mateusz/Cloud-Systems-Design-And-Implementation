@@ -144,3 +144,31 @@ select {
 .reservation-list li {
   line-height: 1.4;
 }
+
+.media-form {
+  margin-bottom: 10px;
+}
+
+.media-list {
+  margin: 8px 0 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.media-item {
+  border: 1px solid #dce3f3;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.media-item-details {
+  color: #3d4660;
+  font-size: 14px;
+  line-height: 1.3;
+}

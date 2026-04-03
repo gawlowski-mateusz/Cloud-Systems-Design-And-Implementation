@@ -1,5 +1,9 @@
-const API_BASE = "/api/auth";
-const RESERVATION_API_BASE = "/api/reservations";
+const API_ROOT = (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL
+  ? window.APP_CONFIG.API_BASE_URL
+  : "http://localhost:8080").replace(/\/$/, "");
+const API_BASE = `${API_ROOT}/api/auth`;
+const RESERVATION_API_BASE = `${API_ROOT}/api/reservations`;
+const MEDIA_API_BASE = `${API_ROOT}/api/media`;
 const TOKEN_KEY = "conference_app_token";
 const USER_KEY = "conference_app_user";
 
@@ -25,6 +29,10 @@ const elements = {
   reservationForm: document.getElementById("reservation-form"),
   reservationList: document.getElementById("reservation-list"),
   reservationMessage: document.getElementById("reservation-message"),
+  mediaForm: document.getElementById("media-form"),
+  mediaFileInput: document.getElementById("media-file"),
+  mediaMessage: document.getElementById("media-message"),
+  mediaList: document.getElementById("media-list"),
 };
 
 function loadUser() {
@@ -65,6 +73,11 @@ function setAuthMessage(message, isError = false) {
 function setReservationMessage(message, isError = false) {
   elements.reservationMessage.textContent = message;
   elements.reservationMessage.style.color = isError ? "#912727" : "#1d5f2f";
+}
+
+function setMediaMessage(message, isError = false) {
+  elements.mediaMessage.textContent = message;
+  elements.mediaMessage.style.color = isError ? "#912727" : "#1d5f2f";
 }
 
 function switchAuthTab(tab) {
@@ -141,6 +154,111 @@ async function setLoggedInState() {
   elements.appCard.classList.remove("hidden");
   elements.welcomeText.textContent = `Welcome, ${user.fullName}`;
   await renderReservations();
+  await renderMediaFiles();
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+async function renderMediaFiles() {
+  elements.mediaList.innerHTML = "";
+
+  let files = [];
+  try {
+    const response = await authenticatedFetch(MEDIA_API_BASE);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to load media files");
+    }
+    files = data.files || [];
+  } catch (error) {
+    const li = document.createElement("li");
+    li.textContent = error.message;
+    elements.mediaList.appendChild(li);
+    return;
+  }
+
+  if (files.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No media files uploaded yet.";
+    elements.mediaList.appendChild(li);
+    return;
+  }
+
+  for (const item of files) {
+    const li = document.createElement("li");
+    li.className = "media-item";
+
+    const details = document.createElement("div");
+    details.className = "media-item-details";
+    details.textContent = `${item.fileName} | ${formatBytes(item.sizeBytes)} | ${new Date(item.createdAt).toLocaleString()}`;
+
+    const downloadButton = document.createElement("button");
+    downloadButton.type = "button";
+    downloadButton.className = "secondary";
+    downloadButton.textContent = "Download";
+    downloadButton.addEventListener("click", () => downloadMediaFile(item.id, item.fileName));
+
+    li.appendChild(details);
+    li.appendChild(downloadButton);
+    elements.mediaList.appendChild(li);
+  }
+}
+
+async function uploadMedia(event) {
+  event.preventDefault();
+  setMediaMessage("");
+
+  const file = elements.mediaFileInput.files && elements.mediaFileInput.files[0];
+  if (!file) {
+    setMediaMessage("Please select a file first.", true);
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await authenticatedFetch(MEDIA_API_BASE, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Upload failed");
+    }
+
+    elements.mediaForm.reset();
+    setMediaMessage("File uploaded successfully.");
+    await renderMediaFiles();
+  } catch (error) {
+    setMediaMessage(error.message, true);
+  }
+}
+
+async function downloadMediaFile(fileId, fileName) {
+  try {
+    const response = await authenticatedFetch(`${MEDIA_API_BASE}/${fileId}`);
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Download failed");
+    }
+
+    const blob = await response.blob();
+    const link = document.createElement("a");
+    const objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    setMediaMessage(error.message, true);
+  }
 }
 
 async function registerUser(event) {
@@ -264,6 +382,7 @@ function bindEvents() {
   elements.loginForm.addEventListener("submit", loginUser);
   elements.registerForm.addEventListener("submit", registerUser);
   elements.reservationForm.addEventListener("submit", createReservation);
+  elements.mediaForm.addEventListener("submit", uploadMedia);
   elements.logoutBtn.addEventListener("click", logout);
 }
 

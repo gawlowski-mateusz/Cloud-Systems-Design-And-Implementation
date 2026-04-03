@@ -95,9 +95,22 @@
         <h3>My Reservations</h3>
         <ul id="reservation-list" class="reservation-list"></ul>
       </article>
+
+      <article class="card">
+        <h3>Media Files</h3>
+        <form id="media-form" class="form media-form">
+          <label>Select file
+            <input type="file" id="media-file" required />
+          </label>
+          <button type="submit">Upload File</button>
+        </form>
+        <p id="media-message" class="message"></p>
+        <ul id="media-list" class="media-list"></ul>
+      </article>
     </section>
   </main>
 
+  <script src="/config.js"></script>
   <script src="/app.js" defer></script>
 </body>
 </html>
