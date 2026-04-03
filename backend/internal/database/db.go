@@ -64,6 +64,22 @@ func EnsureSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create reservations table: %w", err)
 	}
 
+	const mediaFilesTable = `
+		CREATE TABLE IF NOT EXISTS media_files (
+			id BIGSERIAL PRIMARY KEY,
+			user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			original_name TEXT NOT NULL,
+			content_type TEXT NOT NULL,
+			size_bytes BIGINT NOT NULL CHECK (size_bytes > 0),
+			object_key TEXT NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+	`
+
+	if _, err := db.Exec(mediaFilesTable); err != nil {
+		return fmt.Errorf("failed to create media_files table: %w", err)
+	}
+
 	return nil
 }
 
