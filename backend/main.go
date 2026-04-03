@@ -7,7 +7,9 @@ import (
 
 	"neurosciolar/backend/internal/auth"
 	"neurosciolar/backend/internal/database"
+	"neurosciolar/backend/internal/media"
 	"neurosciolar/backend/internal/reservation"
+	"neurosciolar/backend/internal/storage"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -34,6 +36,11 @@ func main() {
 
 	authHandler := auth.NewHandler(db)
 	reservationHandler := reservation.NewHandler(db)
+	fileStore, err := storage.NewFromEnv()
+	if err != nil {
+		log.Fatalf("Failed to initialize file storage: %v", err)
+	}
+	mediaHandler := media.NewHandler(db, fileStore)
 
 	api := r.Group("/api")
 	{
@@ -49,6 +56,14 @@ func main() {
 			reservationGroup.GET("", reservationHandler.ListMine)
 			reservationGroup.POST("", reservationHandler.Create)
 		}
+
+		mediaGroup := api.Group("/media")
+		mediaGroup.Use(auth.RequireAuth())
+		{
+			mediaGroup.GET("", mediaHandler.ListMine)
+			mediaGroup.GET("/:id", mediaHandler.Download)
+			mediaGroup.POST("", mediaHandler.Upload)
+		}
 	}
 
 	r.GET("/health", func(c *gin.Context) {
@@ -63,17 +78,6 @@ func main() {
 			"status": "healthy",
 			"db":     "connected",
 		})
-	})
-
-	r.Static("/assets", "../frontend/assets")
-	r.GET("/", func(c *gin.Context) {
-		c.File("../frontend/index.html")
-	})
-	r.GET("/app.js", func(c *gin.Context) {
-		c.File("../frontend/app.js")
-	})
-	r.GET("/styles.css", func(c *gin.Context) {
-		c.File("../frontend/styles.css")
 	})
 
 	port := os.Getenv("PORT")
