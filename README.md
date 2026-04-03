@@ -9,13 +9,14 @@ Projekt: aplikacja webowa do rezerwacji sal konferencyjnych z obsługą plików 
 Wymagane endpointy zostały zrealizowane:
 
 1. `GET /health` - status API i połączenia DB
-2. `GET /api/reservations` - lista rezerwacji zalogowanego użytkownika
-3. `GET /api/media` - lista plików zalogowanego użytkownika
-4. `GET /api/media/:id` - pobranie pliku multimedialnego
-5. `POST /api/auth/register` - rejestracja użytkownika
-6. `POST /api/auth/login` - logowanie użytkownika
-7. `POST /api/reservations` - utworzenie rezerwacji
-8. `POST /api/media` - upload pliku multimedialnego (`multipart/form-data`, pole `file`)
+2. `GET /ready` - status gotowości backendu i połączenia DB
+3. `GET /api/reservations` - lista rezerwacji zalogowanego użytkownika
+4. `GET /api/media` - lista plików zalogowanego użytkownika
+5. `GET /api/media/:id` - pobranie pliku multimedialnego
+6. `POST /api/auth/register` - rejestracja użytkownika
+7. `POST /api/auth/login` - logowanie użytkownika
+8. `POST /api/reservations` - utworzenie rezerwacji
+9. `POST /api/media` - upload pliku multimedialnego (`multipart/form-data`, pole `file`)
 
 To spełnia warunek min. 2x GET i 2x POST, w tym GET/POST dla plików.
 
@@ -50,6 +51,7 @@ Pliki:
 
 1. `backend/Dockerfile`
 2. `backend/docker-compose.yml`
+3. `backend/.ebignore`
 
 Uruchomienie:
 
@@ -62,6 +64,8 @@ To uruchamia:
 
 1. API (`localhost:8080`)
 2. PostgreSQL (`localhost:5432`)
+
+Do Elastic Beanstalk buduj paczkę z katalogu `backend/`, ale bez lokalnego `docker-compose.yml`. Plik `backend/.ebignore` wycina go z paczki, więc EB użyje `backend/Dockerfile` zamiast trybu compose z lokalnym Postgres.
 
 ### Frontend
 
@@ -154,6 +158,8 @@ Przykładowy flow:
    - `frontend_source_bundle_key`
 4. Wykonaj `terraform apply`.
 5. Odczytaj URL-e z `terraform output`.
+
+Backend ZIP powinien zawierać `Dockerfile`, kod Go i pliki modułu, ale nie lokalny `docker-compose.yml`.
 
 ## 8. Weryfikacja działania
 

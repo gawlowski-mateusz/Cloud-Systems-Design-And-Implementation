@@ -1,0 +1,105 @@
+----------------------------------------
+/var/log/eb-engine.log
+----------------------------------------
+2026/04/03 21:56:46.232177 [INFO] Created symlink /etc/systemd/system/docker.service.wants/eb-docker-events.service → /etc/systemd/system/eb-docker-events.service.
+
+2026/04/03 21:56:46.232209 [INFO] Running command: systemctl show -p PartOf eb-docker-events.service
+2026/04/03 21:56:46.245007 [INFO] Running command: systemctl is-active eb-docker-events.service
+2026/04/03 21:56:46.253905 [INFO] Running command: systemctl start eb-docker-events.service
+2026/04/03 21:56:46.316245 [INFO] Instance has NOT been bootstrapped
+2026/04/03 21:56:46.316281 [INFO] Executing instruction: MarkBootstrapped
+2026/04/03 21:56:46.316287 [INFO] Starting MarkBootstrapped
+2026/04/03 21:56:46.316295 [INFO] Instance has NOT been bootstrapped
+2026/04/03 21:56:46.316389 [INFO] Marked instance as Bootstrapped
+2026/04/03 21:56:46.316396 [INFO] Executing instruction: Save CFN Stack Info
+2026/04/03 21:56:46.316457 [INFO] Executing cleanup logic
+2026/04/03 21:56:46.316472 [INFO] Platform Engine finished execution on command: env-launch
+
+2026/04/03 21:57:11.434210 [INFO] Starting...
+2026/04/03 21:57:11.434248 [INFO] Starting EBPlatform-PlatformEngine
+2026/04/03 21:57:11.434286 [INFO] reading event message file
+2026/04/03 21:57:11.434709 [INFO] Engine received EB command cfn-hup-exec
+
+2026/04/03 21:57:11.513311 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-1:339712937452:stack/awseb-e-gwjppmgvji-stack/d762db20-2fa7-11f1-9225-0affc6401ceb -r AWSEBAutoScalingGroup --region us-east-1
+2026/04/03 21:57:11.856308 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-1:339712937452:stack/awseb-e-gwjppmgvji-stack/d762db20-2fa7-11f1-9225-0affc6401ceb -r AWSEBBeanstalkMetadata --region us-east-1
+2026/04/03 21:57:12.187386 [INFO] checking whether command app-deploy is applicable to this instance...
+2026/04/03 21:57:12.187403 [INFO] this command is applicable to the instance, thus instance should execute command
+2026/04/03 21:57:12.187409 [INFO] Setting up deployment log with request ID: 85a92ecc-e07e-4450-a2fa-5700463f5cab
+2026/04/03 21:57:12.234999 [INFO] Started S3 deployment log upload to s3://elasticbeanstalk-us-east-1-339712937452/resources/environments/logs/deployments/e-gwjppmgvji/eb-deployment-85a92ecc-e07e-4450-a2fa-5700463f5cab.log
+2026/04/03 21:57:12.235053 [INFO] Engine command: (app-deploy)
+
+2026/04/03 21:57:12.235060 [INFO] Downloading EB Application...
+2026/04/03 21:57:12.235064 [INFO] Region: us-east-1
+2026/04/03 21:57:12.235067 [INFO] envID: e-gwjppmgvji
+2026/04/03 21:57:12.235071 [INFO] envBucket: elasticbeanstalk-us-east-1-339712937452
+2026/04/03 21:57:12.235075 [INFO] accountID: 339712937452
+2026/04/03 21:57:12.235078 [INFO] Using manifest file name from command request
+2026/04/03 21:57:12.235111 [INFO] Unable to get version manifest file.
+2026/04/03 21:57:12.235116 [INFO] Downloading latest manifest available.
+2026/04/03 21:57:12.235120 [INFO] Download latest app version manifest
+2026/04/03 21:57:12.235251 [INFO] resources/environments/e-gwjppmgvji/_runtime/versions/manifest
+2026/04/03 21:57:12.285170 [INFO] latestManifest key *: resources/environments/e-gwjppmgvji/_runtime/versions/manifest_1775253333968
+
+2026/04/03 21:57:12.285528 [INFO] Downloading: bucket: elasticbeanstalk-us-east-1-339712937452, object: resources/environments/e-gwjppmgvji/_runtime/versions/manifest_1775253333968, expected bucket owner: 339712937452
+2026/04/03 21:57:12.328163 [INFO] Download successful113bytes downloaded
+2026/04/03 21:57:12.328281 [INFO] Trying to read and parse version manifest...
+2026/04/03 21:57:12.328422 [INFO] Downloading: bucket: elasticbeanstalk-us-east-1-339712937452, object: resources/environments/e-gwjppmgvji/_runtime/_versions/conference-app-backend/v8, expected bucket owner: 339712937452
+2026/04/03 21:57:12.353008 [INFO] Download successful18399bytes downloaded
+2026/04/03 21:57:12.353444 [INFO] Executing instruction: ElectLeader
+2026/04/03 21:57:12.353451 [INFO] Running leader election for instance i-0c97e8acd03614f37...
+2026/04/03 21:57:12.353455 [INFO] Calling the cfn-elect-cmd-leader to elect the command leader.
+2026/04/03 21:57:12.353467 [INFO] Running command: /opt/aws/bin/cfn-elect-cmd-leader --stack arn:aws:cloudformation:us-east-1:339712937452:stack/awseb-e-gwjppmgvji-stack/d762db20-2fa7-11f1-9225-0affc6401ceb --command-name ElasticBeanstalkCommand-AWSEBAutoScalingGroup --invocation-id e60612cf-c305-4d9c-9267-4c80b1cce1a3 --listener-id i-0c97e8acd03614f37 --region us-east-1
+2026/04/03 21:57:12.696980 [INFO] Instance is Leader.
+2026/04/03 21:57:12.697044 [INFO] Executing instruction: stopSqsd
+2026/04/03 21:57:12.697051 [INFO] This is a web server environment instance, skip stop sqsd daemon ...
+2026/04/03 21:57:12.697055 [INFO] Executing instruction: PreBuildEbExtension
+2026/04/03 21:57:12.697100 [INFO] Starting executing the config set Infra-EmbeddedPreBuild.
+2026/04/03 21:57:12.697115 [INFO] Running command: /opt/aws/bin/cfn-init -s arn:aws:cloudformation:us-east-1:339712937452:stack/awseb-e-gwjppmgvji-stack/d762db20-2fa7-11f1-9225-0affc6401ceb -r AWSEBAutoScalingGroup --region us-east-1 --configsets Infra-EmbeddedPreBuild
+2026/04/03 21:57:13.049906 [INFO] Finished executing the config set Infra-EmbeddedPreBuild.
+
+2026/04/03 21:57:13.050001 [INFO] Executing instruction: StagedockerApplication
+2026/04/03 21:57:13.050012 [INFO] Running command: docker ps -a -q -f status=running
+2026/04/03 21:57:13.066964 [INFO] Pruning containers ...
+2026/04/03 21:57:13.066993 [INFO] Running command: docker ps -a
+2026/04/03 21:57:13.081101 [INFO] CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+2026/04/03 21:57:13.081130 [INFO] Running command: docker container prune -f
+2026/04/03 21:57:13.097165 [INFO] Total reclaimed space: 0B
+
+2026/04/03 21:57:13.097185 [INFO] Running command: docker ps -a
+2026/04/03 21:57:13.109310 [INFO] CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+2026/04/03 21:57:13.109326 [INFO] Recreating /var/app/staging/
+2026/04/03 21:57:13.109445 [INFO] Recreating /var/log/eb-docker/containers/eb-current-app
+2026/04/03 21:57:13.109561 [INFO] Running command: /bin/file -m /opt/elasticbeanstalk/config/private/beanstalk-magic -b --mime-type /opt/elasticbeanstalk/deployment/app_source_bundle
+2026/04/03 21:57:13.115971 [INFO] application/zip
+
+2026/04/03 21:57:13.115984 [INFO] app source bundle is zip file ...
+2026/04/03 21:57:13.115989 [INFO] extracting /opt/elasticbeanstalk/deployment/app_source_bundle to /var/app/staging/
+2026/04/03 21:57:13.115997 [INFO] Running command: /usr/bin/unzip -q -o /opt/elasticbeanstalk/deployment/app_source_bundle -d /var/app/staging/
+2026/04/03 21:57:13.121870 [INFO] warning:  /opt/elasticbeanstalk/deployment/app_source_bundle appears to use backslashes as path separators
+
+2026/04/03 21:57:13.121920 [ERROR] An error occurred during execution of command [app-deploy] - [StagedockerApplication]. Stop running the command. Error: Command /usr/bin/unzip -q -o /opt/elasticbeanstalk/deployment/app_source_bundle -d /var/app/staging/ failed with error exit status 1. Stderr:warning:  /opt/elasticbeanstalk/deployment/app_source_bundle appears to use backslashes as path separators
+ 
+
+2026/04/03 21:57:13.121925 [INFO] Executing cleanup logic
+2026/04/03 21:57:13.122006 [INFO] CommandService Response: {"status":"FAILURE","api_version":"1.0","results":[{"status":"FAILURE","msg":"Engine execution has encountered an error.","returncode":1,"events":[{"msg":"Instance deployment: Your source bundle has issues that caused the deployment to fail. For details, see 'eb-engine.log'.","timestamp":1775253433121,"severity":"ERROR"},{"msg":"Instance deployment failed. For details, see 'eb-engine.log'.","timestamp":1775253433121,"severity":"ERROR"}]}]}
+
+2026/04/03 21:57:13.223481 [INFO] Platform Engine finished execution on command: app-deploy
+
+2026/04/03 22:01:03.495004 [INFO] Starting...
+2026/04/03 22:01:03.495088 [INFO] Starting EBPlatform-PlatformEngine
+2026/04/03 22:01:03.495111 [INFO] reading event message file
+2026/04/03 22:01:03.495478 [INFO] Engine received EB command cfn-hup-exec
+
+2026/04/03 22:01:03.590481 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-1:339712937452:stack/awseb-e-gwjppmgvji-stack/d762db20-2fa7-11f1-9225-0affc6401ceb -r AWSEBAutoScalingGroup --region us-east-1
+2026/04/03 22:01:03.966288 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-1:339712937452:stack/awseb-e-gwjppmgvji-stack/d762db20-2fa7-11f1-9225-0affc6401ceb -r AWSEBBeanstalkMetadata --region us-east-1
+2026/04/03 22:01:04.307983 [INFO] checking whether command tail-log is applicable to this instance...
+2026/04/03 22:01:04.307999 [INFO] this command is applicable to the instance, thus instance should execute command
+2026/04/03 22:01:04.308006 [INFO] Engine command: (tail-log)
+
+2026/04/03 22:01:04.308064 [INFO] Executing instruction: GetTailLogs
+2026/04/03 22:01:04.308069 [INFO] Tail Logs...
+2026/04/03 22:01:04.308608 [INFO] Running command: tail -n 100 /var/log/eb-engine.log
+
+

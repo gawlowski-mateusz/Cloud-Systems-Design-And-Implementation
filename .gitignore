@@ -1,3 +1,18 @@
 infrastructure/.terraform/
 infrastructure/terraform.tfvars
+infrastructure/terraform.tfstate
+infrastructure/terraform.tfstate.*
+infrastructure/.terraform.tfstate.lock.info
+infrastructure/*.log
+infrastructure/*-events.json
+infrastructure/*-tail*.log
+infrastructure/fe-info.json
+infrastructure/deploy_tmp/
+deploy_tmp/
+
+# Local deployment artifacts
+backend-v*.zip
+frontend-v*.zip
+infrastructure/backend-v*.zip
+infrastructure/frontend-v*.zip
 backend/.env

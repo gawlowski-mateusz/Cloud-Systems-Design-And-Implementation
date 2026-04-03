@@ -15,12 +15,12 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
-data "aws_default_vpc" "default" {}
+resource "aws_default_vpc" "default" {}
 
 data "aws_subnets" "default_vpc" {
   filter {
     name   = "vpc-id"
-    values = [data.aws_default_vpc.default.id]
+    values = [aws_default_vpc.default.id]
   }
 }
 
@@ -53,7 +53,7 @@ resource "aws_s3_bucket_versioning" "media" {
 resource "aws_security_group" "eb" {
   name        = "${var.project_name}-eb-sg"
   description = "Security group for Elastic Beanstalk instances"
-  vpc_id      = data.aws_default_vpc.default.id
+  vpc_id      = aws_default_vpc.default.id
 
   ingress {
     from_port   = 80
@@ -80,7 +80,7 @@ resource "aws_security_group" "eb" {
 resource "aws_security_group" "rds" {
   name        = "${var.project_name}-rds-sg"
   description = "Security group for PostgreSQL RDS"
-  vpc_id      = data.aws_default_vpc.default.id
+  vpc_id      = aws_default_vpc.default.id
 
   ingress {
     from_port       = 5432
@@ -105,7 +105,7 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_db_instance" "postgres" {
   identifier             = "${var.project_name}-postgres"
   engine                 = "postgres"
-  engine_version         = "16.3"
+  engine_version         = "16"
   instance_class         = var.db_instance_class
   allocated_storage      = 20
   username               = var.db_username
@@ -122,20 +122,6 @@ resource "aws_cognito_user_pool" "app" {
   name = "${var.project_name}-user-pool"
 
   auto_verified_attributes = ["email"]
-
-  schema {
-    name                = "email"
-    attribute_data_type = "String"
-    required            = true
-    mutable             = true
-  }
-
-  schema {
-    name                = "name"
-    attribute_data_type = "String"
-    required            = false
-    mutable             = true
-  }
 }
 
 resource "aws_cognito_user_pool_client" "app" {
@@ -229,15 +215,50 @@ resource "aws_elastic_beanstalk_application_version" "frontend" {
 }
 
 resource "aws_elastic_beanstalk_environment" "backend" {
-  name                = "${var.project_name}-backend-env"
+  name                = "${var.project_name}-backend-env-v4"
   application         = aws_elastic_beanstalk_application.backend.name
   solution_stack_name = data.aws_elastic_beanstalk_solution_stack.docker.name
   version_label       = aws_elastic_beanstalk_application_version.backend.name
+  depends_on          = [aws_security_group.eb, aws_security_group.rds]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:command"
+    name      = "Timeout"
+    value     = "1800"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application"
+    name      = "Application Healthcheck URL"
+    value     = "/health"
+  }
 
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
     value     = aws_iam_instance_profile.eb_instance_profile.name
+  }
+
+  setting {
+    namespace = "aws:ec2:vpc"
+    name      = "VPCId"
+    value     = aws_default_vpc.default.id
+  }
+
+  setting {
+    namespace = "aws:ec2:vpc"
+    name      = "Subnets"
+    value     = join(",", data.aws_subnets.default_vpc.ids)
+  }
+
+  setting {
+    namespace = "aws:ec2:vpc"
+    name      = "ELBSubnets"
+    value     = join(",", data.aws_subnets.default_vpc.ids)
   }
 
   setting {
@@ -317,6 +338,12 @@ resource "aws_elastic_beanstalk_environment" "backend" {
     name      = "AWS_REGION"
     value     = var.aws_region
   }
+
+  setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "InstanceType"
+    value     = "t2.micro"
+  }
 }
 
 resource "aws_elastic_beanstalk_environment" "frontend" {
@@ -324,6 +351,7 @@ resource "aws_elastic_beanstalk_environment" "frontend" {
   application         = aws_elastic_beanstalk_application.frontend.name
   solution_stack_name = data.aws_elastic_beanstalk_solution_stack.docker.name
   version_label       = aws_elastic_beanstalk_application_version.frontend.name
+  depends_on          = [aws_security_group.eb]
 
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
@@ -332,9 +360,33 @@ resource "aws_elastic_beanstalk_environment" "frontend" {
   }
 
   setting {
+    namespace = "aws:ec2:vpc"
+    name      = "VPCId"
+    value     = aws_default_vpc.default.id
+  }
+
+  setting {
+    namespace = "aws:ec2:vpc"
+    name      = "Subnets"
+    value     = join(",", data.aws_subnets.default_vpc.ids)
+  }
+
+  setting {
+    namespace = "aws:ec2:vpc"
+    name      = "ELBSubnets"
+    value     = join(",", data.aws_subnets.default_vpc.ids)
+  }
+
+  setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "SecurityGroups"
     value     = aws_security_group.eb.id
+  }
+
+  setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "InstanceType"
+    value     = "t2.micro"
   }
 }
 

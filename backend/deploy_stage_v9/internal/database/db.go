@@ -6,9 +6,6 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"context"
-	"log"
-	"time"
 )
 
 func Connect() (*sql.DB, error) {
@@ -18,21 +15,17 @@ func Connect() (*sql.DB, error) {
 		getEnv("DB_PORT", "5432"),
 		getEnv("DB_USER", "postgres"),
 		getEnv("DB_PASSWORD", ""),
-		getEnv("DB_NAME", "conference"),
-		getEnv("DB_SSLMODE", "require"),
+		getEnv("DB_NAME", "cloud-systems-design-and-implementation"),
+		getEnv("DB_SSLMODE", "disable"),
 	)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, err
 	}
 
 	if err := db.Ping(); err != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := db.PingContext(ctx); err != nil {
-			return nil, fmt.Errorf("database ping failed: %w", err)
-		}
+		return nil, fmt.Errorf("database ping failed: %w", err)
 	}
 
 	return db, nil
