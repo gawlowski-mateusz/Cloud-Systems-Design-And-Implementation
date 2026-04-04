@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"os"
 
-	_ "github.com/lib/pq"
 	"context"
-	"log"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 func Connect() (*sql.DB, error) {
 	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s connect_timeout=10",
 		getEnv("DB_HOST", "localhost"),
 		getEnv("DB_PORT", "5432"),
 		getEnv("DB_USER", "postgres"),
@@ -27,12 +27,10 @@ func Connect() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := db.PingContext(ctx); err != nil {
-			return nil, fmt.Errorf("database ping failed: %w", err)
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("database ping failed: %w", err)
 	}
 
 	return db, nil
