@@ -74,8 +74,14 @@ Required variables:
 
 1. `COGNITO_REGION`
 2. `COGNITO_CLIENT_ID`
+3. `COGNITO_USER_POOL_ID`
 
 User registration/login is handled by AWS Cognito.
+
+Current implementation details:
+
+1. user registration is auto-confirmed by backend (`AdminConfirmSignUp`),
+2. login path includes fallback auto-confirm for still-unconfirmed users.
 
 ## 8. Deployment and tests
 
@@ -89,17 +95,25 @@ Functional verification includes:
 
 Result for the current project stage:
 
-1. stable backend: `conference-app-backend-stable-v15` (`v15-stable`, Green/Ok),
-2. stable frontend: `conference-app-frontend-env` (`v5-stable`, Green/Ok),
+1. stable backend: `conference-app-backend-env-v7` (`v21-stable`, Green/Ok),
+2. stable frontend: `conference-app-frontend-env` (`v16-stable`, Green/Ok),
 3. `/health` and `/ready` return `200`,
-4. frontend URL returns `200` after `v5-stable` deployment.
+4. frontend URL returns `200` after `v16-stable` deployment.
+
+Communication model in the final stage:
+
+1. frontend uses same-origin API calls (`window.location.origin/api/...`),
+2. nginx in frontend container proxies `/api/` to backend,
+3. this removed cross-origin browser fetch errors.
 
 Resolved deployment issues:
 
 1. ZIP bundles created with `Compress-Archive` caused unzip errors on EB (replaced with `tar -a`),
 2. backend startup timeout (added `connect_timeout` and `PingContext` in DB connection),
 3. frontend 503 after deployment (added `frontend/.ebignore`, excluded `docker-compose.yml` from EB bundle),
-4. Cognito login for newly registered users (`UNCONFIRMED` account requires confirmation).
+4. Cognito login for newly registered users (`UNCONFIRMED`) resolved by backend auto-confirm,
+5. media upload failures resolved by adding S3 write permissions to EB instance role,
+6. persistent browser fetch errors after login resolved by frontend same-origin API proxy via nginx.
 
 ## 9. Equivalent setup via AWS Console
 

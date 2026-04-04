@@ -33,11 +33,13 @@ The backend URL is configurable in `frontend/config.js`:
 
 ```js
 window.APP_CONFIG = {
-  API_BASE_URL: "http://conference-app-backend-v15.us-east-1.elasticbeanstalk.com"
+  API_BASE_URL: window.location.origin
 };
 ```
 
-For local development, it can be temporarily set to `http://localhost:8080`.
+In the current production setup, frontend calls `/api/...` on the same origin and nginx proxies those requests to the backend Elastic Beanstalk endpoint.
+
+For local development, `API_BASE_URL` can be temporarily set to `http://localhost:8080`.
 
 ## 2. Project structure
 
@@ -151,9 +153,9 @@ In `cognito` mode, set in backend:
 
 Practical notes:
 
-1. after registration, a user can be `UNCONFIRMED` and login will fail,
-2. password must satisfy Cognito policy (min. 8 chars, uppercase, lowercase, number, symbol),
-3. if the account is unconfirmed, confirmation can be done with `admin-confirm-sign-up`.
+1. backend uses automatic Cognito user confirmation on registration,
+2. backend also retries login by auto-confirming users that are still unconfirmed,
+3. password must satisfy Cognito policy (min. 8 chars, uppercase, lowercase, number, symbol).
 
 ## 7. Deployment to AWS Elastic Beanstalk
 
@@ -176,9 +178,14 @@ Verified ZIP packaging method (Windows + EB):
 
 Current stable deployment state:
 
-1. Backend EB: `conference-app-backend-stable-v15` (`v15-stable`, health Green/Ok),
-2. Frontend EB: `conference-app-frontend-env` (`v5-stable`, health Green/Ok),
+1. Backend EB: `conference-app-backend-env-v7` (`v21-stable`, health Green/Ok),
+2. Frontend EB: `conference-app-frontend-env` (`v16-stable`, health Green/Ok),
 3. region: `us-east-1`.
+
+Current public endpoints:
+
+1. Frontend: `http://awseb-e-k-AWSEBLoa-I9M1IFS1NGLX-1773247684.us-east-1.elb.amazonaws.com`
+2. Backend (proxied by frontend): `http://awseb-e-m-AWSEBLoa-710K7YVU8HGC-1395327606.us-east-1.elb.amazonaws.com`
 
 ## 8. Verification
 
