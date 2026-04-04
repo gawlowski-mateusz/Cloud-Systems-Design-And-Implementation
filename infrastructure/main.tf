@@ -174,6 +174,51 @@ resource "aws_iam_role_policy_attachment" "s3_read_only" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
 }
 
+resource "aws_iam_role_policy" "s3_media_access" {
+  name = "${var.project_name}-s3-media-access"
+  role = aws_iam_role.eb_ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket"
+        ],
+        Resource = aws_s3_bucket.media.arn
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        Resource = "${aws_s3_bucket.media.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "cognito_admin_confirm" {
+  name = "${var.project_name}-cognito-admin-confirm"
+  role = aws_iam_role.eb_ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "cognito-idp:AdminConfirmSignUp"
+        ],
+        Resource = aws_cognito_user_pool.app.arn
+      }
+    ]
+  })
+}
+
 resource "aws_iam_instance_profile" "eb_instance_profile" {
   name = "${var.project_name}-eb-instance-profile"
   role = aws_iam_role.eb_ec2_role.name
@@ -319,6 +364,12 @@ resource "aws_elastic_beanstalk_environment" "backend" {
     namespace = "aws:elasticbeanstalk:application:environment"
     name      = "COGNITO_CLIENT_ID"
     value     = aws_cognito_user_pool_client.app.id
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "COGNITO_USER_POOL_ID"
+    value     = aws_cognito_user_pool.app.id
   }
 
   setting {

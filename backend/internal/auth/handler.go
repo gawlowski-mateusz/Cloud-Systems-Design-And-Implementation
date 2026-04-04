@@ -23,6 +23,7 @@ type Handler struct {
 	authProvider    string
 	cognitoClient   *cognitoidentityprovider.Client
 	cognitoClientID string
+	cognitoUserPool string
 }
 
 type registerRequest struct {
@@ -55,11 +56,13 @@ func NewHandler(db *sql.DB) *Handler {
 	if authProvider == "cognito" {
 		region := strings.TrimSpace(os.Getenv("COGNITO_REGION"))
 		clientID := strings.TrimSpace(os.Getenv("COGNITO_CLIENT_ID"))
+		userPoolID := strings.TrimSpace(os.Getenv("COGNITO_USER_POOL_ID"))
 		if region != "" && clientID != "" {
 			cfg, err := awsconfig.LoadDefaultConfig(context.Background(), awsconfig.WithRegion(region))
 			if err == nil {
 				h.cognitoClient = cognitoidentityprovider.NewFromConfig(cfg)
 				h.cognitoClientID = clientID
+				h.cognitoUserPool = userPoolID
 			}
 		}
 	}
@@ -247,6 +250,13 @@ func (h *Handler) registerWithCognito(ctx context.Context, fullName, email, pass
 		return fmt.Errorf("failed to register user in cognito")
 	}
 
+	if h.cognitoUserPool != "" {
+		confirmErr := h.confirmCognitoUser(ctx, email)
+		if confirmErr != nil {
+			return fmt.Errorf("failed to auto-confirm user in cognito")
+		}
+	}
+
 	return nil
 }
 
@@ -255,19 +265,41 @@ func (h *Handler) loginWithCognito(ctx context.Context, email, password string) 
 		return "", fmt.Errorf("cognito is not configured on the backend")
 	}
 
-	_, err := h.cognitoClient.InitiateAuth(ctx, &cognitoidentityprovider.InitiateAuthInput{
+	authInput := &cognitoidentityprovider.InitiateAuthInput{
 		AuthFlow: types.AuthFlowTypeUserPasswordAuth,
 		ClientId: &h.cognitoClientID,
 		AuthParameters: map[string]string{
 			"USERNAME": email,
 			"PASSWORD": password,
 		},
-	})
+	}
+
+	_, err := h.cognitoClient.InitiateAuth(ctx, authInput)
 	if err != nil {
+		errText := strings.ToLower(err.Error())
+		if strings.Contains(errText, "not confirmed") && h.cognitoUserPool != "" {
+			if confirmErr := h.confirmCognitoUser(ctx, email); confirmErr == nil {
+				if _, retryErr := h.cognitoClient.InitiateAuth(ctx, authInput); retryErr == nil {
+					return "", nil
+				}
+			}
+		}
 		return "", fmt.Errorf("invalid email or password")
 	}
 
 	return "", nil
+}
+
+func (h *Handler) confirmCognitoUser(ctx context.Context, email string) error {
+	if h.cognitoClient == nil || h.cognitoUserPool == "" {
+		return fmt.Errorf("cognito is not configured on the backend")
+	}
+
+	_, err := h.cognitoClient.AdminConfirmSignUp(ctx, &cognitoidentityprovider.AdminConfirmSignUpInput{
+		UserPoolId: &h.cognitoUserPool,
+		Username:   &email,
+	})
+	return err
 }
 
 func (h *Handler) createOrGetLocalUser(fullName, email, passwordHash string) (int64, error) {

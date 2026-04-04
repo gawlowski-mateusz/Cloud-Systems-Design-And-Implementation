@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"neurosciolar/backend/internal/auth"
 	"neurosciolar/backend/internal/database"
@@ -32,7 +33,19 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.Use(cors.Default())
+	frontendOrigin := strings.TrimSpace(os.Getenv("FRONTEND_ORIGIN"))
+	corsConfig := cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		AllowCredentials: false,
+	}
+	if frontendOrigin == "" {
+		corsConfig.AllowAllOrigins = true
+	} else {
+		corsConfig.AllowOrigins = []string{frontendOrigin}
+	}
+	r.Use(cors.New(corsConfig))
 
 	authHandler := auth.NewHandler(db)
 	reservationHandler := reservation.NewHandler(db)

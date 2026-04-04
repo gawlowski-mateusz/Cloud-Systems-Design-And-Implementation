@@ -1,19 +1,10 @@
-FROM golang:1.24-alpine AS build
-
-WORKDIR /app
-
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o server .
-
 FROM alpine:3.21
 
 WORKDIR /app
 RUN adduser -D -u 10001 appuser
 
-COPY --from=build /app/server ./server
+COPY server ./server
+RUN chmod +x ./server
 RUN mkdir -p /app/uploads && chown -R appuser:appuser /app
 
 USER appuser
