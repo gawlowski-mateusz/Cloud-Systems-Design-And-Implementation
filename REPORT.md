@@ -1,16 +1,16 @@
-# Raport - Projekt 1
+# Report - Project 1
 
-## 1. Temat aplikacji
+## 1. Application topic
 
-Zrealizowano aplikację webową do rezerwacji sal konferencyjnych z obsługą multimediów.
+A web application for conference room reservations with media handling was implemented.
 
-## 2. Backend + Frontend jako oddzielne moduły
+## 2. Backend + Frontend as separate modules
 
-1. Backend: API w Go (Gin), katalog `backend/`.
-2. Frontend: aplikacja statyczna (HTML/CSS/JS), katalog `frontend/`.
-3. Moduły są niezależne i mogą być hostowane osobno.
+1. Backend: API in Go (Gin), `backend/` folder.
+2. Frontend: static app (HTML/CSS/JS), `frontend/` folder.
+3. Modules are independent and can be hosted separately.
 
-## 3. Endpointy
+## 3. Endpoints
 
 ### GET
 
@@ -24,26 +24,26 @@ Zrealizowano aplikację webową do rezerwacji sal konferencyjnych z obsługą mu
 1. `POST /api/auth/register`
 2. `POST /api/auth/login`
 3. `POST /api/reservations`
-4. `POST /api/media` (upload pliku)
+4. `POST /api/media` (file upload)
 
-Wymóg GET/POST dla plików jest spełniony przez `POST /api/media` i `GET /api/media/:id`.
+The GET/POST file requirement is satisfied by `POST /api/media` and `GET /api/media/:id`.
 
 ## 4. Docker
 
 1. `backend/Dockerfile` + `backend/docker-compose.yml`
 2. `frontend/Dockerfile` + `frontend/docker-compose.yml`
 
-Spełniono wymóg osobnej konfiguracji Dockera dla obu modułów.
+The requirement for separate Docker configuration for both modules is met.
 
 ## 5. AWS CLI
 
-Konfiguracja wykonywana poleceniem:
+Configuration command:
 
 ```bash
 aws configure
 ```
 
-Weryfikacja:
+Verification:
 
 ```bash
 aws sts get-caller-identity
@@ -51,45 +51,59 @@ aws sts get-caller-identity
 
 ## 6. Terraform
 
-Folder `infrastructure/` zawiera:
+The `infrastructure/` folder contains:
 
 1. `main.tf`
 2. `variables.tf`
 3. `outputs.tf`
 4. `terraform.tfvars.example`
 
-Konfiguracja obejmuje:
+Configuration includes:
 
-1. AWS Elastic Beanstalk (frontend i backend osobno),
+1. AWS Elastic Beanstalk (frontend and backend separately),
 2. RDS PostgreSQL,
-3. S3 na pliki,
-4. CloudWatch Log Groups,
+3. S3 for files,
+4. CloudWatch log groups,
 5. AWS Cognito User Pool + App Client.
 
 ## 7. Cognito
 
-Backend wspiera tryb `AUTH_PROVIDER=cognito`.
+Backend supports `AUTH_PROVIDER=cognito` mode.
 
-Wymagane zmienne:
+Required variables:
 
 1. `COGNITO_REGION`
 2. `COGNITO_CLIENT_ID`
 
-Rejestracja/logowanie użytkownika odbywa się przez AWS Cognito.
+User registration/login is handled by AWS Cognito.
 
-## 8. Wdrożenie i testy
+## 8. Deployment and tests
 
-Weryfikacja funkcjonalna obejmuje:
+Functional verification includes:
 
-1. rejestrację i logowanie,
-2. tworzenie oraz pobieranie rezerwacji,
-3. upload i pobieranie plików,
-4. integrację z PostgreSQL,
-5. poprawne uruchomienie kontenerów backend/frontend.
+1. registration and login,
+2. reservation creation and retrieval,
+3. file upload and download,
+4. PostgreSQL integration,
+5. successful startup of backend/frontend containers.
 
-## 9. Odpowiednik przez AWS Console
+Result for the current project stage:
 
-Równoważną infrastrukturę należy utworzyć ręcznie w konsoli AWS:
+1. stable backend: `conference-app-backend-stable-v15` (`v15-stable`, Green/Ok),
+2. stable frontend: `conference-app-frontend-env` (`v5-stable`, Green/Ok),
+3. `/health` and `/ready` return `200`,
+4. frontend URL returns `200` after `v5-stable` deployment.
+
+Resolved deployment issues:
+
+1. ZIP bundles created with `Compress-Archive` caused unzip errors on EB (replaced with `tar -a`),
+2. backend startup timeout (added `connect_timeout` and `PingContext` in DB connection),
+3. frontend 503 after deployment (added `frontend/.ebignore`, excluded `docker-compose.yml` from EB bundle),
+4. Cognito login for newly registered users (`UNCONFIRMED` account requires confirmation).
+
+## 9. Equivalent setup via AWS Console
+
+Equivalent infrastructure can be created manually in AWS Console:
 
 1. RDS,
 2. S3,
@@ -97,14 +111,20 @@ Równoważną infrastrukturę należy utworzyć ręcznie w konsoli AWS:
 4. 2x Elastic Beanstalk,
 5. CloudWatch.
 
-Następnie wdrożyć oba moduły i potwierdzić działanie endpointów i UI.
+Then deploy both modules and confirm endpoint/UI behavior.
 
-## 10. Podsumowanie
+## 10. Summary
 
-Wymagania projektowe zostały zaadresowane przez komplet:
+Project requirements were addressed through:
 
-1. aplikacji (backend + frontend),
-2. konfiguracji Docker,
-3. konfiguracji Terraform,
-4. integracji z AWS Cognito,
-5. dokumentacji uruchomienia i wdrożenia.
+1. application modules (backend + frontend),
+2. Docker configuration,
+3. Terraform configuration,
+4. AWS Cognito integration,
+5. startup and deployment documentation.
+
+Final project state:
+
+1. working backend and frontend environments on AWS Elastic Beanstalk,
+2. working registration/login, reservations, and media features,
+3. documented, repeatable deployment process for AWS Learner Lab.

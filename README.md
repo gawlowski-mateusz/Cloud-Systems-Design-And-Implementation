@@ -1,105 +1,107 @@
 # Cloud-Systems-Design-And-Implementation
 
-Projekt: aplikacja webowa do rezerwacji sal konferencyjnych z obsługą plików multimedialnych.
+Project: a web application for conference room reservations with media file support.
 
-## 1. Zakres funkcjonalny
+## 1. Functional scope
 
 ### Backend API (Go + Gin)
 
-Wymagane endpointy zostały zrealizowane:
+The required endpoints are implemented:
 
-1. `GET /health` - status API i połączenia DB
-2. `GET /ready` - status gotowości backendu i połączenia DB
-3. `GET /api/reservations` - lista rezerwacji zalogowanego użytkownika
-4. `GET /api/media` - lista plików zalogowanego użytkownika
-5. `GET /api/media/:id` - pobranie pliku multimedialnego
-6. `POST /api/auth/register` - rejestracja użytkownika
-7. `POST /api/auth/login` - logowanie użytkownika
-8. `POST /api/reservations` - utworzenie rezerwacji
-9. `POST /api/media` - upload pliku multimedialnego (`multipart/form-data`, pole `file`)
+1. `GET /health` - API and DB connection status
+2. `GET /ready` - backend readiness and DB connection status
+3. `GET /api/reservations` - reservation list for the authenticated user
+4. `GET /api/media` - media file list for the authenticated user
+5. `GET /api/media/:id` - download media file
+6. `POST /api/auth/register` - user registration
+7. `POST /api/auth/login` - user login
+8. `POST /api/reservations` - create reservation
+9. `POST /api/media` - media file upload (`multipart/form-data`, `file` field)
 
-To spełnia warunek min. 2x GET i 2x POST, w tym GET/POST dla plików.
+This satisfies the minimum requirement of 2x GET and 2x POST, including GET/POST for files.
 
-### Moduł Frontend
+### Frontend module
 
-Frontend działa jako niezależna aplikacja statyczna:
+The frontend works as an independent static application:
 
-1. rejestracja i logowanie,
-2. tworzenie i podgląd rezerwacji,
-3. upload plików,
-4. lista plików i pobieranie.
+1. registration and login,
+2. reservation creation and listing,
+3. file upload,
+4. file listing and download.
 
-Adres backendu jest konfigurowalny przez `frontend/config.js`:
+The backend URL is configurable in `frontend/config.js`:
 
 ```js
 window.APP_CONFIG = {
-  API_BASE_URL: "http://localhost:8080"
+  API_BASE_URL: "http://conference-app-backend-v15.us-east-1.elasticbeanstalk.com"
 };
 ```
 
-## 2. Struktura projektu
+For local development, it can be temporarily set to `http://localhost:8080`.
 
-1. `backend/` - niezależny moduł API
-2. `frontend/` - niezależny moduł UI
-3. `infrastructure/` - Terraform dla AWS
+## 2. Project structure
+
+1. `backend/` - independent API module
+2. `frontend/` - independent UI module
+3. `infrastructure/` - Terraform for AWS
 
 ## 3. Docker
 
 ### Backend
 
-Pliki:
+Files:
 
 1. `backend/Dockerfile`
 2. `backend/docker-compose.yml`
 3. `backend/.ebignore`
 
-Uruchomienie:
+Run:
 
 ```bash
 cd backend
 docker compose up -d --build
 ```
 
-To uruchamia:
+This starts:
 
 1. API (`localhost:8080`)
 2. PostgreSQL (`localhost:5432`)
 
-Do Elastic Beanstalk buduj paczkę z katalogu `backend/`, ale bez lokalnego `docker-compose.yml`. Plik `backend/.ebignore` wycina go z paczki, więc EB użyje `backend/Dockerfile` zamiast trybu compose z lokalnym Postgres.
+For Elastic Beanstalk, build the package from `backend/` without local `docker-compose.yml`. The `backend/.ebignore` file excludes it from the package, so EB uses `backend/Dockerfile` instead of compose mode with local Postgres.
 
 ### Frontend
 
-Pliki:
+Files:
 
 1. `frontend/Dockerfile`
 2. `frontend/nginx.conf`
 3. `frontend/docker-compose.yml`
 
-Uruchomienie:
+Run:
 
 ```bash
 cd frontend
 docker compose up -d --build
 ```
 
-Frontend będzie dostępny pod `http://localhost:3000`.
+Frontend is available at `http://localhost:3000`.
 
-## 4. Konfiguracja AWS CLI
+## 4. AWS CLI configuration
 
-W Learner Lab dane z `AWS Details` zmieniają się dynamicznie. Konfiguruj CLI po każdym starcie labu:
+In Learner Lab, values in `AWS Details` change dynamically. Configure CLI after each lab start:
 
 ```bash
 aws configure
 ```
 
-Podaj:
+Provide:
 
 1. Access Key ID
 2. Secret Access Key
-3. Region (np. `eu-central-1`)
+3. Region (for this project: `us-east-1`)
 4. Output format (`json`)
 
-Weryfikacja:
+Verification:
 
 ```bash
 aws sts get-caller-identity
@@ -107,24 +109,24 @@ aws sts get-caller-identity
 
 ## 5. Terraform
 
-### Zawartość
+### Contents
 
-Folder `infrastructure/` zawiera:
+The `infrastructure/` folder contains:
 
 1. `main.tf`
 2. `variables.tf`
 3. `outputs.tf`
 4. `terraform.tfvars.example`
 
-Konfiguracja obejmuje:
+Configuration includes:
 
-1. 2 niezależne środowiska AWS Elastic Beanstalk (frontend i backend),
+1. two independent AWS Elastic Beanstalk environments (frontend and backend),
 2. RDS PostgreSQL,
-3. S3 na pliki multimedialne,
-4. CloudWatch Log Groups,
+3. S3 for media files,
+4. CloudWatch log groups,
 5. AWS Cognito (User Pool + App Client).
 
-### Uruchomienie Terraform
+### Running Terraform
 
 ```bash
 cd infrastructure
@@ -134,56 +136,76 @@ terraform plan
 terraform apply
 ```
 
-## 6. Cognito w aplikacji
+## 6. Cognito in the application
 
-Backend wspiera dwa tryby auth przez zmienną `AUTH_PROVIDER`:
+Backend supports two auth modes via `AUTH_PROVIDER`:
 
-1. `local` - lokalne konto + hasło,
-2. `cognito` - rejestracja i logowanie przez AWS Cognito.
+1. `local` - local account + password,
+2. `cognito` - registration and login via AWS Cognito.
 
-W trybie `cognito` ustaw w backendzie:
+In `cognito` mode, set in backend:
 
 1. `AUTH_PROVIDER=cognito`
 2. `COGNITO_REGION=<aws-region>`
 3. `COGNITO_CLIENT_ID=<user-pool-client-id>`
 
-## 7. Deployment na AWS Elastic Beanstalk
+Practical notes:
 
-Przykładowy flow:
+1. after registration, a user can be `UNCONFIRMED` and login will fail,
+2. password must satisfy Cognito policy (min. 8 chars, uppercase, lowercase, number, symbol),
+3. if the account is unconfirmed, confirmation can be done with `admin-confirm-sign-up`.
 
-1. Zbuduj paczki ZIP dla backend i frontend.
-2. Wyślij je do bucketu wersji (`aws_s3_bucket.eb_versions`).
-3. Ustaw klucze ZIP w `terraform.tfvars`:
+## 7. Deployment to AWS Elastic Beanstalk
+
+Example flow:
+
+1. Build ZIP packages for backend and frontend.
+2. Upload them to the versions bucket (`aws_s3_bucket.eb_versions`).
+3. Set ZIP keys in `terraform.tfvars`:
    - `backend_source_bundle_key`
    - `frontend_source_bundle_key`
-4. Wykonaj `terraform apply`.
-5. Odczytaj URL-e z `terraform output`.
+4. Run `terraform apply`.
+5. Read URLs from `terraform output`.
 
-Backend ZIP powinien zawierać `Dockerfile`, kod Go i pliki modułu, ale nie lokalny `docker-compose.yml`.
+Verified ZIP packaging method (Windows + EB):
 
-## 8. Weryfikacja działania
+1. Do not use `Compress-Archive` for EB bundles (it may cause `\\` path separator unzip errors on instance).
+2. Use `tar -a -c -f ...`.
+3. Backend ZIP should include `Dockerfile`, `go.mod`, `go.sum`, `main.go`, `internal/`, `.ebignore`, and should not include `docker-compose.yml`.
+4. Frontend ZIP should include `Dockerfile`, `nginx.conf`, static files, and `.ebignore` excluding `docker-compose.yml`.
 
-Po wdrożeniu sprawdź:
+Current stable deployment state:
 
-1. rejestrację/logowanie,
-2. dodawanie i listowanie rezerwacji,
-3. upload i pobieranie plików,
-4. logi CloudWatch,
-5. zapis danych w RDS,
-6. obiekty plików w S3.
+1. Backend EB: `conference-app-backend-stable-v15` (`v15-stable`, health Green/Ok),
+2. Frontend EB: `conference-app-frontend-env` (`v5-stable`, health Green/Ok),
+3. region: `us-east-1`.
 
-## 9. Odpowiednik konfiguracji przez AWS Console
+## 8. Verification
 
-Aby spełnić punkt z konfiguracją przez WWW AWS:
+After deployment, check:
 
-1. utwórz ręcznie RDS PostgreSQL,
-2. utwórz S3 bucket,
-3. utwórz Cognito User Pool i App Client,
-4. utwórz 2 aplikacje Elastic Beanstalk,
-5. skonfiguruj ENV backendu identycznie jak w Terraform,
-6. uruchom frontend i backend jako oddzielne deploymenty,
-7. włącz logowanie do CloudWatch.
+1. backend `GET /health` returns `200`,
+2. backend `GET /ready` returns `200` and `db=connected`,
+3. frontend URL returns `200` (no 503),
+4. registration/login (Cognito),
+5. reservation creation and listing,
+6. file upload and download,
+7. CloudWatch logs,
+8. writes to RDS,
+9. media objects in S3.
 
-## 10. Raport
+## 9. Equivalent setup in AWS Console
 
-Raport podsumowujący znajduje się w pliku `REPORT.md`.
+To satisfy the requirement for AWS web console configuration:
+
+1. manually create RDS PostgreSQL,
+2. create S3 bucket,
+3. create Cognito User Pool and App Client,
+4. create 2 Elastic Beanstalk applications,
+5. configure backend env vars identically to Terraform,
+6. deploy frontend and backend as separate deployments,
+7. enable CloudWatch logging.
+
+## 10. Report
+
+Summary report is in `REPORT.md`.
