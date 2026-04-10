@@ -15,9 +15,9 @@ output "media_bucket" {
 }
 
 output "cognito_user_pool_id" {
-  value = aws_cognito_user_pool.app.id
+  value = var.enable_cognito ? aws_cognito_user_pool.app[0].id : null
 }
 
 output "cognito_client_id" {
-  value = aws_cognito_user_pool_client.app.id
+  value = var.enable_cognito ? aws_cognito_user_pool_client.app[0].id : null
 }

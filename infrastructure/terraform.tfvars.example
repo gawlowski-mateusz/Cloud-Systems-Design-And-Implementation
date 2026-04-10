@@ -1,4 +1,6 @@
-aws_region                = "eu-central-1"
+aws_region                = "us-east-1"
+enable_cognito            = false
+manage_cloudwatch_log_groups = false
 project_name              = "conference-app"
 db_instance_class         = "db.t3.micro"
 db_name                   = "conference"

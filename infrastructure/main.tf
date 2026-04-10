@@ -26,7 +26,11 @@ data "aws_subnets" "default_vpc" {
 
 data "aws_elastic_beanstalk_solution_stack" "docker" {
   most_recent = true
-  name_regex  = "64bit Amazon Linux 2023.*Docker"
+  name_regex  = "^64bit Amazon Linux 2023.*running Docker$"
+}
+
+locals {
+  default_vpc_subnet_ids = sort(data.aws_subnets.default_vpc.ids)
 }
 
 resource "aws_s3_bucket" "media" {
@@ -99,7 +103,7 @@ resource "aws_security_group" "rds" {
 
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-db-subnets"
-  subnet_ids = data.aws_subnets.default_vpc.ids
+  subnet_ids = local.default_vpc_subnet_ids
 }
 
 resource "aws_db_instance" "postgres" {
@@ -107,6 +111,7 @@ resource "aws_db_instance" "postgres" {
   engine                 = "postgres"
   engine_version         = "16"
   instance_class         = var.db_instance_class
+  storage_type           = "gp3"
   allocated_storage      = 20
   username               = var.db_username
   password               = var.db_password
@@ -115,18 +120,22 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = false
   skip_final_snapshot    = true
-  backup_retention_period = 1
+  backup_retention_period = 0
 }
 
 resource "aws_cognito_user_pool" "app" {
+  count = var.enable_cognito ? 1 : 0
+
   name = "${var.project_name}-user-pool"
 
   auto_verified_attributes = ["email"]
 }
 
 resource "aws_cognito_user_pool_client" "app" {
+  count = var.enable_cognito ? 1 : 0
+
   name         = "${var.project_name}-client"
-  user_pool_id = aws_cognito_user_pool.app.id
+  user_pool_id = aws_cognito_user_pool.app[0].id
 
   explicit_auth_flows = [
     "ALLOW_USER_PASSWORD_AUTH",
@@ -135,93 +144,6 @@ resource "aws_cognito_user_pool_client" "app" {
   ]
 
   generate_secret = false
-}
-
-resource "aws_iam_role" "eb_ec2_role" {
-  name = "${var.project_name}-eb-ec2-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eb_web_tier" {
-  role       = aws_iam_role.eb_ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier"
-}
-
-resource "aws_iam_role_policy_attachment" "eb_worker_tier" {
-  role       = aws_iam_role.eb_ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier"
-}
-
-resource "aws_iam_role_policy_attachment" "eb_multicontainer" {
-  role       = aws_iam_role.eb_ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker"
-}
-
-resource "aws_iam_role_policy_attachment" "s3_read_only" {
-  role       = aws_iam_role.eb_ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-}
-
-resource "aws_iam_role_policy" "s3_media_access" {
-  name = "${var.project_name}-s3-media-access"
-  role = aws_iam_role.eb_ec2_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "s3:ListBucket"
-        ],
-        Resource = aws_s3_bucket.media.arn
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ],
-        Resource = "${aws_s3_bucket.media.arn}/*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "cognito_admin_confirm" {
-  name = "${var.project_name}-cognito-admin-confirm"
-  role = aws_iam_role.eb_ec2_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "cognito-idp:AdminConfirmSignUp"
-        ],
-        Resource = aws_cognito_user_pool.app.arn
-      }
-    ]
-  })
-}
-
-resource "aws_iam_instance_profile" "eb_instance_profile" {
-  name = "${var.project_name}-eb-instance-profile"
-  role = aws_iam_role.eb_ec2_role.name
 }
 
 resource "aws_elastic_beanstalk_application" "backend" {
@@ -233,7 +155,7 @@ resource "aws_elastic_beanstalk_application" "frontend" {
 }
 
 resource "aws_s3_bucket" "eb_versions" {
-  bucket = "${var.project_name}-eb-versions-${data.aws_caller_identity.current.account_id}"
+  bucket = "${var.project_name}-eb-versions-${var.aws_region}-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_public_access_block" "eb_versions" {
@@ -264,11 +186,8 @@ resource "aws_elastic_beanstalk_environment" "backend" {
   application         = aws_elastic_beanstalk_application.backend.name
   solution_stack_name = data.aws_elastic_beanstalk_solution_stack.docker.name
   version_label       = aws_elastic_beanstalk_application_version.backend.name
+  wait_for_ready_timeout = "45m"
   depends_on          = [aws_security_group.eb, aws_security_group.rds]
-
-  lifecycle {
-    create_before_destroy = true
-  }
 
   setting {
     namespace = "aws:elasticbeanstalk:command"
@@ -285,7 +204,7 @@ resource "aws_elastic_beanstalk_environment" "backend" {
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
-    value     = aws_iam_instance_profile.eb_instance_profile.name
+    value     = var.eb_instance_profile_name
   }
 
   setting {
@@ -297,13 +216,25 @@ resource "aws_elastic_beanstalk_environment" "backend" {
   setting {
     namespace = "aws:ec2:vpc"
     name      = "Subnets"
-    value     = join(",", data.aws_subnets.default_vpc.ids)
+    value     = join(",", local.default_vpc_subnet_ids)
   }
 
   setting {
-    namespace = "aws:ec2:vpc"
-    name      = "ELBSubnets"
-    value     = join(",", data.aws_subnets.default_vpc.ids)
+    namespace = "aws:elasticbeanstalk:environment"
+    name      = "EnvironmentType"
+    value     = "SingleInstance"
+  }
+
+  setting {
+    namespace = "aws:autoscaling:asg"
+    name      = "MinSize"
+    value     = "1"
+  }
+
+  setting {
+    namespace = "aws:autoscaling:asg"
+    name      = "MaxSize"
+    value     = "1"
   }
 
   setting {
@@ -351,25 +282,34 @@ resource "aws_elastic_beanstalk_environment" "backend" {
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
     name      = "AUTH_PROVIDER"
-    value     = "cognito"
+    value     = var.enable_cognito ? "cognito" : "local"
   }
 
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "COGNITO_REGION"
-    value     = var.aws_region
+  dynamic "setting" {
+    for_each = var.enable_cognito ? [1] : []
+    content {
+      namespace = "aws:elasticbeanstalk:application:environment"
+      name      = "COGNITO_REGION"
+      value     = var.aws_region
+    }
   }
 
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "COGNITO_CLIENT_ID"
-    value     = aws_cognito_user_pool_client.app.id
+  dynamic "setting" {
+    for_each = var.enable_cognito ? [1] : []
+    content {
+      namespace = "aws:elasticbeanstalk:application:environment"
+      name      = "COGNITO_CLIENT_ID"
+      value     = aws_cognito_user_pool_client.app[0].id
+    }
   }
 
-  setting {
-    namespace = "aws:elasticbeanstalk:application:environment"
-    name      = "COGNITO_USER_POOL_ID"
-    value     = aws_cognito_user_pool.app.id
+  dynamic "setting" {
+    for_each = var.enable_cognito ? [1] : []
+    content {
+      namespace = "aws:elasticbeanstalk:application:environment"
+      name      = "COGNITO_USER_POOL_ID"
+      value     = aws_cognito_user_pool.app[0].id
+    }
   }
 
   setting {
@@ -402,12 +342,13 @@ resource "aws_elastic_beanstalk_environment" "frontend" {
   application         = aws_elastic_beanstalk_application.frontend.name
   solution_stack_name = data.aws_elastic_beanstalk_solution_stack.docker.name
   version_label       = aws_elastic_beanstalk_application_version.frontend.name
+  wait_for_ready_timeout = "45m"
   depends_on          = [aws_security_group.eb]
 
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
-    value     = aws_iam_instance_profile.eb_instance_profile.name
+    value     = var.eb_instance_profile_name
   }
 
   setting {
@@ -419,13 +360,25 @@ resource "aws_elastic_beanstalk_environment" "frontend" {
   setting {
     namespace = "aws:ec2:vpc"
     name      = "Subnets"
-    value     = join(",", data.aws_subnets.default_vpc.ids)
+    value     = join(",", local.default_vpc_subnet_ids)
   }
 
   setting {
-    namespace = "aws:ec2:vpc"
-    name      = "ELBSubnets"
-    value     = join(",", data.aws_subnets.default_vpc.ids)
+    namespace = "aws:elasticbeanstalk:environment"
+    name      = "EnvironmentType"
+    value     = "SingleInstance"
+  }
+
+  setting {
+    namespace = "aws:autoscaling:asg"
+    name      = "MinSize"
+    value     = "1"
+  }
+
+  setting {
+    namespace = "aws:autoscaling:asg"
+    name      = "MaxSize"
+    value     = "1"
   }
 
   setting {
@@ -442,11 +395,15 @@ resource "aws_elastic_beanstalk_environment" "frontend" {
 }
 
 resource "aws_cloudwatch_log_group" "backend" {
+  count = var.manage_cloudwatch_log_groups ? 1 : 0
+
   name              = "/aws/elasticbeanstalk/${var.project_name}-backend"
-  retention_in_days = 14
+  retention_in_days = 3
 }
 
 resource "aws_cloudwatch_log_group" "frontend" {
+  count = var.manage_cloudwatch_log_groups ? 1 : 0
+
   name              = "/aws/elasticbeanstalk/${var.project_name}-frontend"
-  retention_in_days = 14
+  retention_in_days = 3
 }
