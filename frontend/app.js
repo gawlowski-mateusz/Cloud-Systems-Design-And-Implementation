@@ -65,6 +65,21 @@ async function authenticatedFetch(url, options = {}) {
   return response;
 }
 
+async function readApiResponse(response) {
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+
+  if (contentType.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+
+  const text = await response.text();
+  return text ? { message: text } : {};
+}
+
 function setAuthMessage(message, isError = false) {
   elements.authMessage.textContent = message;
   elements.authMessage.style.color = isError ? "#912727" : "#1d5f2f";
@@ -112,7 +127,7 @@ async function renderReservations() {
   let reservations = [];
   try {
     const response = await authenticatedFetch(RESERVATION_API_BASE);
-    const data = await response.json();
+    const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || "Failed to load reservations");
     }
@@ -169,7 +184,7 @@ async function renderMediaFiles() {
   let files = [];
   try {
     const response = await authenticatedFetch(MEDIA_API_BASE);
-    const data = await response.json();
+    const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || "Failed to load media files");
     }
@@ -226,7 +241,7 @@ async function uploadMedia(event) {
       method: "POST",
       body: formData,
     });
-    const data = await response.json();
+    const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || "Upload failed");
     }
@@ -243,7 +258,7 @@ async function downloadMediaFile(fileId, fileName) {
   try {
     const response = await authenticatedFetch(`${MEDIA_API_BASE}/${fileId}`);
     if (!response.ok) {
-      const data = await response.json();
+      const data = await readApiResponse(response);
       throw new Error(data.error || "Download failed");
     }
 
@@ -278,9 +293,9 @@ async function registerUser(event) {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    const data = await readApiResponse(response);
     if (!response.ok) {
-      throw new Error(data.error || "Registration failed");
+      throw new Error(data.error || data.message || "Registration failed");
     }
 
     setAuthMessage("Registration successful. You can now login.");
@@ -307,9 +322,9 @@ async function loginUser(event) {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    const data = await readApiResponse(response);
     if (!response.ok) {
-      throw new Error(data.error || "Login failed");
+      throw new Error(data.error || data.message || "Login failed");
     }
 
     localStorage.setItem(TOKEN_KEY, data.token);
@@ -356,9 +371,9 @@ async function createReservation(event) {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    const data = await readApiResponse(response);
     if (!response.ok) {
-      throw new Error(data.error || "Failed to create reservation");
+      throw new Error(data.error || data.message || "Failed to create reservation");
     }
 
     elements.reservationForm.reset();
