@@ -103,6 +103,16 @@ Provide:
 3. Region (for this project: `us-east-1`)
 4. Output format (`json`)
 
+If you prefer command-based setup (including temporary session token):
+
+```bash
+aws configure set aws_access_key_id <ACCESS_KEY_ID>
+aws configure set aws_secret_access_key <SECRET_ACCESS_KEY>
+aws configure set aws_session_token <SESSION_TOKEN>
+aws configure set region us-east-1
+aws configure set output json
+```
+
 Verification:
 
 ```bash
@@ -125,8 +135,8 @@ Configuration includes:
 1. two independent AWS Elastic Beanstalk environments (frontend and backend),
 2. RDS PostgreSQL,
 3. S3 for media files,
-4. CloudWatch log groups,
-5. AWS Cognito (User Pool + App Client).
+4. Learner Lab mode with local authentication (`AUTH_PROVIDER=local`),
+5. no Cognito and no Terraform-managed CloudWatch log groups (IAM-limited in Learner Lab).
 
 ### Running Terraform
 
@@ -138,24 +148,44 @@ terraform plan
 terraform apply
 ```
 
-## 6. Cognito in the application
+### Learner Lab notes
 
-Backend supports two auth modes via `AUTH_PROVIDER`:
+With the currently used Learner Lab role in this project:
+
+1. `ec2:DescribeVpcs` works in `us-east-1` and fails in `eu-central-1`,
+2. Cognito read APIs are denied,
+3. CloudWatch Logs read APIs are denied.
+
+For Learner Lab use the following values in `infrastructure/terraform.tfvars`:
+
+1. `aws_region = "us-east-1"`
+2. `enable_cognito = false`
+3. `manage_cloudwatch_log_groups = false`
+
+These values are now enforced by Terraform variable validation, so this setup is intentionally Learner-Lab-only.
+
+If you switch AWS account, use a separate Terraform workspace (or separate state file) so Terraform does not try to refresh resources from the previous account:
+
+```bash
+terraform workspace new learner-lab
+terraform init -reconfigure
+```
+
+## 6. Authentication in Learner Lab
+
+In this Learner Lab setup, backend uses local authentication only:
 
 1. `local` - local account + password,
-2. `cognito` - registration and login via AWS Cognito.
+2. `cognito` is disabled by infrastructure policy constraints.
 
-In `cognito` mode, set in backend:
+Backend environment is configured by Terraform with:
 
-1. `AUTH_PROVIDER=cognito`
-2. `COGNITO_REGION=<aws-region>`
-3. `COGNITO_CLIENT_ID=<user-pool-client-id>`
+1. `AUTH_PROVIDER=local`
 
 Practical notes:
 
-1. backend uses automatic Cognito user confirmation on registration,
-2. backend also retries login by auto-confirming users that are still unconfirmed,
-3. password must satisfy Cognito policy (min. 8 chars, uppercase, lowercase, number, symbol).
+1. registration/login is handled by local backend account storage,
+2. no Cognito resources are created in Learner Lab mode.
 
 ## 7. Deployment to AWS Elastic Beanstalk
 
@@ -173,19 +203,20 @@ Verified ZIP packaging method (Windows + EB):
 
 1. Do not use `Compress-Archive` for EB bundles (it may cause `\\` path separator unzip errors on instance).
 2. Use `tar -a -c -f ...`.
-3. Backend ZIP should include `Dockerfile`, `go.mod`, `go.sum`, `main.go`, `internal/`, `.ebignore`, and should not include `docker-compose.yml`.
-4. Frontend ZIP should include `Dockerfile`, `nginx.conf`, static files, and `.ebignore` excluding `docker-compose.yml`.
+3. Backend ZIP should include `Dockerfile`, prebuilt `server` binary and `.ebignore` (and should not include `docker-compose.yml`).
+4. Frontend ZIP should include `Dockerfile`, `nginx.conf`, static files, and should not include local compose files.
 
 Current stable deployment state:
 
-1. Backend EB: `conference-app-backend-env-v7` (`v21-stable`, health Green/Ok),
-2. Frontend EB: `conference-app-frontend-env` (`v16-stable`, health Green/Ok),
+1. Backend EB: `conference-app-backend-env-v4` (`v6`, env id `e-wupevtiepf`, health Green/Ok),
+2. Frontend EB: `conference-app-frontend-env` (`v5`, env id `e-jgmmph3wzh`, health Green/Ok),
 3. region: `us-east-1`.
 
 Current public endpoints:
 
-1. Frontend: `http://awseb-e-k-AWSEBLoa-I9M1IFS1NGLX-1773247684.us-east-1.elb.amazonaws.com`
-2. Backend (proxied by frontend): `http://awseb-e-m-AWSEBLoa-710K7YVU8HGC-1395327606.us-east-1.elb.amazonaws.com`
+1. Frontend: `http://3.91.146.55` (CNAME: `conference-app-frontend-env.eba-pp32weaw.us-east-1.elasticbeanstalk.com`)
+2. Backend direct: `http://54.221.212.68` (CNAME: `conference-app-backend-env-v4.eba-9m87vpny.us-east-1.elasticbeanstalk.com`)
+3. Backend via frontend proxy: `http://3.91.146.55/api/...`
 
 ## 8. Verification
 
@@ -194,12 +225,11 @@ After deployment, check:
 1. backend `GET /health` returns `200`,
 2. backend `GET /ready` returns `200` and `db=connected`,
 3. frontend URL returns `200` (no 503),
-4. registration/login (Cognito),
+4. registration/login (local auth),
 5. reservation creation and listing,
 6. file upload and download,
-7. CloudWatch logs,
-8. writes to RDS,
-9. media objects in S3.
+7. writes to RDS,
+8. media objects in S3.
 
 ## 9. Equivalent setup in AWS Console
 
@@ -207,11 +237,11 @@ To satisfy the requirement for AWS web console configuration:
 
 1. manually create RDS PostgreSQL,
 2. create S3 bucket,
-3. create Cognito User Pool and App Client,
-4. create 2 Elastic Beanstalk applications,
-5. configure backend env vars identically to Terraform,
-6. deploy frontend and backend as separate deployments,
-7. enable CloudWatch logging.
+3. create 2 Elastic Beanstalk applications,
+4. configure backend env vars identically to Terraform (`AUTH_PROVIDER=local` in Learner Lab mode),
+5. deploy frontend and backend as separate deployments,
+6. use pre-existing `LabInstanceProfile` for EC2 instances,
+7. treat Cognito and custom CloudWatch logs as optional outside Learner Lab (when IAM permissions allow).
 
 ## 10. Report
 
