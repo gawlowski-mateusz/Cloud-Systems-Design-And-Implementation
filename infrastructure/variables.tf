@@ -13,11 +13,6 @@ variable "enable_cognito" {
   description = "Whether to create and use Cognito resources"
   type        = bool
   default     = false
-
-  validation {
-    condition     = var.enable_cognito == false
-    error_message = "Learner Lab policy blocks Cognito APIs, so enable_cognito must stay false."
-  }
 }
 
 variable "manage_cloudwatch_log_groups" {

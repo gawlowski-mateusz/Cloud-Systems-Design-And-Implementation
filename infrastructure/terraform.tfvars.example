@@ -1,5 +1,5 @@
 aws_region                = "us-east-1"
-enable_cognito            = false
+enable_cognito            = true
 manage_cloudwatch_log_groups = false
 project_name              = "conference-app"
 db_instance_class         = "db.t3.micro"
