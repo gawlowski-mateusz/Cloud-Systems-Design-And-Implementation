@@ -73,24 +73,24 @@ Configuration includes:
 1. AWS Elastic Beanstalk (frontend and backend separately),
 2. RDS PostgreSQL,
 3. S3 for files,
-4. Learner Lab mode with local authentication (`AUTH_PROVIDER=local`),
-5. Cognito and Terraform-managed CloudWatch log groups disabled in current deployment (IAM-limited in Learner Lab).
+4. Learner Lab mode with Cognito authentication (`AUTH_PROVIDER=cognito`),
+5. CloudWatch configured via Elastic Beanstalk log streaming (`StreamLogs=true`, `LogPublicationControl=true`, `RetentionInDays=14`), while optional Terraform-managed dedicated log groups remain disabled (`manage_cloudwatch_log_groups=false`).
 
 ## 7. Authentication mode
 
-Current deployed mode uses local authentication only.
+Current deployed mode uses Cognito authentication.
 
 Deployment variables in Learner Lab:
 
-1. `AUTH_PROVIDER=local`
-2. `enable_cognito=false`
+1. `AUTH_PROVIDER=cognito`
+2. `enable_cognito=true`
 3. `manage_cloudwatch_log_groups=false`
 
-User registration/login is handled by the backend local user storage.
+User registration/login is handled through AWS Cognito (User Pool + App Client).
 
 Implementation note:
 
-1. Cognito code path exists in backend, but it is not active in the current Learner Lab deployment.
+1. Backend keeps a synchronized local profile after Cognito authentication to preserve app-level user relations.
 
 ## 8. Deployment and tests
 
@@ -101,14 +101,6 @@ Functional verification includes:
 3. file upload and download,
 4. PostgreSQL integration,
 5. successful startup of backend/frontend containers.
-
-Result for the current project stage:
-
-1. stable backend: `conference-app-backend-env-v4` (`v6`, env id `e-wupevtiepf`, Green/Ok),
-2. stable frontend: `conference-app-frontend-env` (`v5`, env id `e-jgmmph3wzh`, Green/Ok),
-3. `/health` and `/ready` return `200`,
-4. frontend URL returns `200` after `v5` deployment,
-5. current outputs: frontend `3.91.146.55`, backend `54.221.212.68`, RDS `conference-app-postgres.c1e8a80kwpsb.us-east-1.rds.amazonaws.com`.
 
 Communication model in the final stage:
 
@@ -132,10 +124,10 @@ Equivalent infrastructure can be created manually in AWS Console:
 1. RDS,
 2. S3,
 3. 2x Elastic Beanstalk,
-4. backend environment variables for local auth,
+4. backend environment variables for Cognito auth,
 5. pre-existing `LabInstanceProfile` in Learner Lab.
 
-Then deploy both modules and confirm endpoint/UI behavior. Cognito and custom CloudWatch setup is optional outside Learner Lab when IAM permissions allow.
+Then deploy both modules and confirm endpoint/UI behavior. Custom CloudWatch setup is optional when IAM permissions allow.
 
 ## 10. Summary
 
@@ -144,7 +136,7 @@ Project requirements were addressed through:
 1. application modules (backend + frontend),
 2. Docker configuration,
 3. Terraform configuration,
-4. authentication and media flows in Learner Lab deployment mode,
+4. Cognito-based authentication and media flows in Learner Lab deployment mode,
 5. startup and deployment documentation.
 
 Final project state:

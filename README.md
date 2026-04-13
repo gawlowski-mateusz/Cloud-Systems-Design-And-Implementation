@@ -135,8 +135,8 @@ Configuration includes:
 1. two independent AWS Elastic Beanstalk environments (frontend and backend),
 2. RDS PostgreSQL,
 3. S3 for media files,
-4. Learner Lab mode with local authentication (`AUTH_PROVIDER=local`),
-5. no Cognito and no Terraform-managed CloudWatch log groups (IAM-limited in Learner Lab).
+4. Learner Lab mode with Cognito authentication (`AUTH_PROVIDER=cognito`),
+5. CloudWatch configured via Elastic Beanstalk log streaming (`StreamLogs=true`, `LogPublicationControl=true`, `RetentionInDays=14`) while optional Terraform-managed dedicated log groups remain disabled (`manage_cloudwatch_log_groups=false`).
 
 ### Running Terraform
 
@@ -153,16 +153,16 @@ terraform apply
 With the currently used Learner Lab role in this project:
 
 1. `ec2:DescribeVpcs` works in `us-east-1` and fails in `eu-central-1`,
-2. Cognito read APIs are denied,
-3. CloudWatch Logs read APIs are denied.
+2. Cognito APIs and CloudWatch Logs APIs can vary by account/session,
+3. in the current deployment account both Cognito and CloudWatch Logs APIs are available.
 
 For Learner Lab use the following values in `infrastructure/terraform.tfvars`:
 
 1. `aws_region = "us-east-1"`
-2. `enable_cognito = false`
+2. `enable_cognito = true`
 3. `manage_cloudwatch_log_groups = false`
 
-These values are now enforced by Terraform variable validation, so this setup is intentionally Learner-Lab-only.
+`aws_region` and `manage_cloudwatch_log_groups` are enforced by Terraform variable validation. `enable_cognito` can be enabled when IAM permissions allow.
 
 If you switch AWS account, use a separate Terraform workspace (or separate state file) so Terraform does not try to refresh resources from the previous account:
 
@@ -173,19 +173,19 @@ terraform init -reconfigure
 
 ## 6. Authentication in Learner Lab
 
-In this Learner Lab setup, backend uses local authentication only:
+In this Learner Lab setup, backend uses Cognito authentication:
 
-1. `local` - local account + password,
-2. `cognito` is disabled by infrastructure policy constraints.
+1. `cognito` - Cognito User Pool + App Client,
+2. backend also keeps a synchronized local profile used for app-level relations.
 
 Backend environment is configured by Terraform with:
 
-1. `AUTH_PROVIDER=local`
+1. `AUTH_PROVIDER=cognito`
 
 Practical notes:
 
-1. registration/login is handled by local backend account storage,
-2. no Cognito resources are created in Learner Lab mode.
+1. registration/login is validated through Cognito,
+2. Terraform creates/uses Cognito resources in the current Learner Lab deployment.
 
 ## 7. Deployment to AWS Elastic Beanstalk
 
@@ -210,7 +210,8 @@ Current stable deployment state:
 
 1. Backend EB: `conference-app-backend-env-v4` (`v6`, env id `e-wupevtiepf`, health Green/Ok),
 2. Frontend EB: `conference-app-frontend-env` (`v5`, env id `e-jgmmph3wzh`, health Green/Ok),
-3. region: `us-east-1`.
+3. region: `us-east-1`,
+4. Cognito enabled: User Pool `us-east-1_TdCRZSdPO`, Client `50hfast9kurm7sm7obes9p61nj`.
 
 Current public endpoints:
 
@@ -225,11 +226,12 @@ After deployment, check:
 1. backend `GET /health` returns `200`,
 2. backend `GET /ready` returns `200` and `db=connected`,
 3. frontend URL returns `200` (no 503),
-4. registration/login (local auth),
+4. registration/login (Cognito auth),
 5. reservation creation and listing,
 6. file upload and download,
 7. writes to RDS,
-8. media objects in S3.
+8. media objects in S3,
+9. CloudWatch log streams are present under `/aws/elasticbeanstalk/conference-app-backend-env-v4/...` and `/aws/elasticbeanstalk/conference-app-frontend-env/...`.
 
 ## 9. Equivalent setup in AWS Console
 
@@ -238,10 +240,10 @@ To satisfy the requirement for AWS web console configuration:
 1. manually create RDS PostgreSQL,
 2. create S3 bucket,
 3. create 2 Elastic Beanstalk applications,
-4. configure backend env vars identically to Terraform (`AUTH_PROVIDER=local` in Learner Lab mode),
+4. configure backend env vars identically to Terraform (`AUTH_PROVIDER=cognito` plus Cognito IDs and region),
 5. deploy frontend and backend as separate deployments,
 6. use pre-existing `LabInstanceProfile` for EC2 instances,
-7. treat Cognito and custom CloudWatch logs as optional outside Learner Lab (when IAM permissions allow).
+7. enable Elastic Beanstalk log streaming to CloudWatch (StreamLogs and LogPublicationControl).
 
 ## 10. Report
 
