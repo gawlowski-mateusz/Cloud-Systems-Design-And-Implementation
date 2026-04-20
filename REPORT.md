@@ -74,7 +74,7 @@ Configuration includes:
 2. RDS PostgreSQL,
 3. S3 for files,
 4. Learner Lab mode with Cognito authentication (`AUTH_PROVIDER=cognito`),
-5. CloudWatch configured via Elastic Beanstalk log streaming (`StreamLogs=true`, `LogPublicationControl=true`, `RetentionInDays=14`), while optional Terraform-managed dedicated log groups remain disabled (`manage_cloudwatch_log_groups=false`).
+5. CloudWatch configured via Elastic Beanstalk log streaming (`StreamLogs=true`, `LogPublicationControl=true`, `RetentionInDays=14`) and Terraform-managed dedicated log groups enabled (`manage_cloudwatch_log_groups=true`, retention 3 days).
 
 ## 7. Authentication mode
 
@@ -84,7 +84,7 @@ Deployment variables in Learner Lab:
 
 1. `AUTH_PROVIDER=cognito`
 2. `enable_cognito=true`
-3. `manage_cloudwatch_log_groups=false`
+3. `manage_cloudwatch_log_groups=true`
 
 User registration/login is handled through AWS Cognito (User Pool + App Client).
 
@@ -115,7 +115,8 @@ Resolved deployment issues:
 3. frontend deployment failed when ZIP used Windows `\\` separators (fixed by tar-created ZIP),
 4. frontend 502 was fixed by updating nginx upstream to the current backend EB CNAME in `us-east-1`,
 5. frontend auth 404 was fixed by forwarding full request URI in nginx (`proxy_pass ...$request_uri`),
-6. state/account drift after switching accounts was stabilized by using a dedicated Terraform workspace (`learner-lab`).
+6. state/account drift after switching accounts was stabilized by using a dedicated Terraform workspace (`learner-lab`),
+7. pre-existing CloudWatch log groups were imported into Terraform state to avoid `ResourceAlreadyExistsException` during apply.
 
 ## 9. Equivalent setup via AWS Console
 
@@ -128,6 +129,7 @@ Equivalent infrastructure can be created manually in AWS Console:
 5. pre-existing `LabInstanceProfile` in Learner Lab.
 
 Then deploy both modules and confirm endpoint/UI behavior. Custom CloudWatch setup is optional when IAM permissions allow.
+Then deploy both modules and confirm endpoint/UI behavior, including active CloudWatch log streaming and managed dedicated log groups.
 
 ## 10. Summary
 
@@ -143,4 +145,5 @@ Final project state:
 
 1. working backend and frontend environments on AWS Elastic Beanstalk,
 2. working registration/login, reservations, and media features,
-3. documented, repeatable deployment process for AWS Learner Lab.
+3. active CloudWatch logging (EB streaming plus Terraform-managed dedicated log groups),
+4. documented, repeatable deployment process for AWS Learner Lab.

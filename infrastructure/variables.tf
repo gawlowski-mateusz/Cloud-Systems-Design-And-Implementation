@@ -19,11 +19,6 @@ variable "manage_cloudwatch_log_groups" {
   description = "Whether Terraform should manage dedicated CloudWatch log groups"
   type        = bool
   default     = false
-
-  validation {
-    condition     = var.manage_cloudwatch_log_groups == false
-    error_message = "Learner Lab policy blocks CloudWatch Logs Describe APIs, so manage_cloudwatch_log_groups must stay false."
-  }
 }
 
 variable "eb_instance_profile_name" {

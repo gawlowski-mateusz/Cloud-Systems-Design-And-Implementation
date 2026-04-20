@@ -136,7 +136,7 @@ Configuration includes:
 2. RDS PostgreSQL,
 3. S3 for media files,
 4. Learner Lab mode with Cognito authentication (`AUTH_PROVIDER=cognito`),
-5. CloudWatch configured via Elastic Beanstalk log streaming (`StreamLogs=true`, `LogPublicationControl=true`, `RetentionInDays=14`) while optional Terraform-managed dedicated log groups remain disabled (`manage_cloudwatch_log_groups=false`).
+5. CloudWatch configured via Elastic Beanstalk log streaming (`StreamLogs=true`, `LogPublicationControl=true`, `RetentionInDays=14`) and Terraform-managed dedicated log groups enabled (`manage_cloudwatch_log_groups=true`, retention 3 days).
 
 ### Running Terraform
 
@@ -160,9 +160,9 @@ For Learner Lab use the following values in `infrastructure/terraform.tfvars`:
 
 1. `aws_region = "us-east-1"`
 2. `enable_cognito = true`
-3. `manage_cloudwatch_log_groups = false`
+3. `manage_cloudwatch_log_groups = true`
 
-`aws_region` and `manage_cloudwatch_log_groups` are enforced by Terraform variable validation. `enable_cognito` can be enabled when IAM permissions allow.
+`aws_region` is enforced by Terraform variable validation. `enable_cognito` and `manage_cloudwatch_log_groups` can be enabled when IAM permissions allow.
 
 If you switch AWS account, use a separate Terraform workspace (or separate state file) so Terraform does not try to refresh resources from the previous account:
 
@@ -211,7 +211,8 @@ Current stable deployment state:
 1. Backend EB: `conference-app-backend-env-v4` (`v6`, env id `e-wupevtiepf`, health Green/Ok),
 2. Frontend EB: `conference-app-frontend-env` (`v5`, env id `e-jgmmph3wzh`, health Green/Ok),
 3. region: `us-east-1`,
-4. Cognito enabled: User Pool `us-east-1_TdCRZSdPO`, Client `50hfast9kurm7sm7obes9p61nj`.
+4. Cognito enabled: User Pool `us-east-1_TdCRZSdPO`, Client `50hfast9kurm7sm7obes9p61nj`,
+5. CloudWatch active: EB log streaming enabled and Terraform-managed log groups `/aws/elasticbeanstalk/conference-app-backend` and `/aws/elasticbeanstalk/conference-app-frontend` are present in state.
 
 Current public endpoints:
 
@@ -231,7 +232,8 @@ After deployment, check:
 6. file upload and download,
 7. writes to RDS,
 8. media objects in S3,
-9. CloudWatch log streams are present under `/aws/elasticbeanstalk/conference-app-backend-env-v4/...` and `/aws/elasticbeanstalk/conference-app-frontend-env/...`.
+9. CloudWatch log streams are present under `/aws/elasticbeanstalk/conference-app-backend-env-v4/...` and `/aws/elasticbeanstalk/conference-app-frontend-env/...`,
+10. Terraform state includes `aws_cloudwatch_log_group.backend[0]` and `aws_cloudwatch_log_group.frontend[0]`.
 
 ## 9. Equivalent setup in AWS Console
 
@@ -243,7 +245,8 @@ To satisfy the requirement for AWS web console configuration:
 4. configure backend env vars identically to Terraform (`AUTH_PROVIDER=cognito` plus Cognito IDs and region),
 5. deploy frontend and backend as separate deployments,
 6. use pre-existing `LabInstanceProfile` for EC2 instances,
-7. enable Elastic Beanstalk log streaming to CloudWatch (StreamLogs and LogPublicationControl).
+7. enable Elastic Beanstalk log streaming to CloudWatch (StreamLogs and LogPublicationControl),
+8. ensure dedicated log groups `/aws/elasticbeanstalk/conference-app-backend` and `/aws/elasticbeanstalk/conference-app-frontend` are managed (create or import if they already exist).
 
 ## 10. Report
 
