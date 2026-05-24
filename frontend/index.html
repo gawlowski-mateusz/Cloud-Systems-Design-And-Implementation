@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Conference Hall Reservation</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="container">
     <header class="header">
       <h1>Conference Hall Reservation</h1>
-      <p>Book halls for meetings, talks, and internal events.</p>
+      <p>Microservices on AWS Fargate: auth, reservations, files, notifications.</p>
     </header>
 
     <section id="auth-card" class="card">
@@ -107,10 +107,18 @@
         <p id="media-message" class="message"></p>
         <ul id="media-list" class="media-list"></ul>
       </article>
+
+      <article class="card">
+        <div class="toolbar">
+          <h3>Notifications</h3>
+          <button id="refresh-notifications" type="button" class="secondary">Refresh</button>
+        </div>
+        <ul id="notification-list" class="reservation-list"></ul>
+      </article>
     </section>
   </main>
 
-  <script src="/config.js"></script>
-  <script src="/app.js" defer></script>
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

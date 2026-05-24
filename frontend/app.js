@@ -1,10 +1,11 @@
 const API_ROOT = (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL
   ? window.APP_CONFIG.API_BASE_URL
   : "http://localhost:8080").replace(/\/$/, "");
-const API_BASE = `${API_ROOT}/api/auth`;
-const RESERVATION_API_BASE = `${API_ROOT}/api/reservations`;
-const MEDIA_API_BASE = `${API_ROOT}/api/media`;
-const TOKEN_KEY = "conference_app_token";
+const AUTH_API = `${API_ROOT}/auth`;
+const RESERVATIONS_API = `${API_ROOT}/reservations`;
+const FILES_API = `${API_ROOT}/files`;
+const NOTIFICATIONS_API = `${API_ROOT}/notifications`;
+const TOKEN_KEY = "conference_app_id_token";
 const USER_KEY = "conference_app_user";
 
 const halls = [
@@ -33,6 +34,8 @@ const elements = {
   mediaFileInput: document.getElementById("media-file"),
   mediaMessage: document.getElementById("media-message"),
   mediaList: document.getElementById("media-list"),
+  notificationList: document.getElementById("notification-list"),
+  refreshNotifications: document.getElementById("refresh-notifications"),
 };
 
 function loadUser() {
@@ -49,25 +52,20 @@ async function authenticatedFetch(url, options = {}) {
   if (!token) {
     throw new Error("Please login first.");
   }
-
   const headers = {
     ...(options.headers || {}),
     Authorization: `Bearer ${token}`,
   };
-
   const response = await fetch(url, { ...options, headers });
-
   if (response.status === 401) {
     logout();
     throw new Error("Session expired. Please login again.");
   }
-
   return response;
 }
 
 async function readApiResponse(response) {
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
-
   if (contentType.includes("application/json")) {
     try {
       return await response.json();
@@ -75,7 +73,6 @@ async function readApiResponse(response) {
       return {};
     }
   }
-
   const text = await response.text();
   return text ? { message: text } : {};
 }
@@ -107,7 +104,6 @@ function switchAuthTab(tab) {
 function renderHalls() {
   elements.hallList.innerHTML = "";
   elements.hallSelect.innerHTML = "";
-
   for (const hall of halls) {
     const card = document.createElement("div");
     card.className = "hall-item";
@@ -123,10 +119,9 @@ function renderHalls() {
 
 async function renderReservations() {
   elements.reservationList.innerHTML = "";
-
   let reservations = [];
   try {
-    const response = await authenticatedFetch(RESERVATION_API_BASE);
+    const response = await authenticatedFetch(RESERVATIONS_API);
     const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || "Failed to load reservations");
@@ -138,14 +133,12 @@ async function renderReservations() {
     elements.reservationList.appendChild(li);
     return;
   }
-
   if (reservations.length === 0) {
     const li = document.createElement("li");
     li.textContent = "No reservations yet.";
     elements.reservationList.appendChild(li);
     return;
   }
-
   reservations
     .sort((a, b) => `${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`))
     .forEach((reservation) => {
@@ -164,12 +157,12 @@ async function setLoggedInState() {
     elements.appCard.classList.add("hidden");
     return;
   }
-
   elements.authCard.classList.add("hidden");
   elements.appCard.classList.remove("hidden");
-  elements.welcomeText.textContent = `Welcome, ${user.fullName}`;
+  elements.welcomeText.textContent = `Welcome, ${user.fullName || user.email}`;
   await renderReservations();
   await renderMediaFiles();
+  await renderNotifications();
 }
 
 function formatBytes(bytes) {
@@ -180,10 +173,9 @@ function formatBytes(bytes) {
 
 async function renderMediaFiles() {
   elements.mediaList.innerHTML = "";
-
   let files = [];
   try {
-    const response = await authenticatedFetch(MEDIA_API_BASE);
+    const response = await authenticatedFetch(FILES_API);
     const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || "Failed to load media files");
@@ -195,27 +187,24 @@ async function renderMediaFiles() {
     elements.mediaList.appendChild(li);
     return;
   }
-
   if (files.length === 0) {
     const li = document.createElement("li");
     li.textContent = "No media files uploaded yet.";
     elements.mediaList.appendChild(li);
     return;
   }
-
   for (const item of files) {
     const li = document.createElement("li");
     li.className = "media-item";
-
     const details = document.createElement("div");
     details.className = "media-item-details";
-    details.textContent = `${item.fileName} | ${formatBytes(item.sizeBytes)} | ${new Date(item.createdAt).toLocaleString()}`;
+    details.textContent = `${item.originalName} | ${formatBytes(item.sizeBytes)} | ${new Date(item.createdAt).toLocaleString()}`;
 
     const downloadButton = document.createElement("button");
     downloadButton.type = "button";
     downloadButton.className = "secondary";
     downloadButton.textContent = "Download";
-    downloadButton.addEventListener("click", () => downloadMediaFile(item.id, item.fileName));
+    downloadButton.addEventListener("click", () => downloadMediaFile(item.fileId, item.originalName));
 
     li.appendChild(details);
     li.appendChild(downloadButton);
@@ -223,21 +212,51 @@ async function renderMediaFiles() {
   }
 }
 
+async function renderNotifications() {
+  elements.notificationList.innerHTML = "";
+  let items = [];
+  try {
+    const response = await authenticatedFetch(NOTIFICATIONS_API);
+    const data = await readApiResponse(response);
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to load notifications");
+    }
+    items = data.notifications || [];
+  } catch (error) {
+    const li = document.createElement("li");
+    li.textContent = error.message;
+    elements.notificationList.appendChild(li);
+    return;
+  }
+  if (items.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No notifications yet.";
+    elements.notificationList.appendChild(li);
+    return;
+  }
+  items
+    .sort((a, b) => (b.eventTs || "").localeCompare(a.eventTs || ""))
+    .slice(0, 20)
+    .forEach((n) => {
+      const li = document.createElement("li");
+      const when = n.eventTs ? new Date(n.eventTs).toLocaleString() : "";
+      li.textContent = `[${n.eventType || "event"}] ${when} ${n.payload || ""}`;
+      elements.notificationList.appendChild(li);
+    });
+}
+
 async function uploadMedia(event) {
   event.preventDefault();
   setMediaMessage("");
-
   const file = elements.mediaFileInput.files && elements.mediaFileInput.files[0];
   if (!file) {
     setMediaMessage("Please select a file first.", true);
     return;
   }
-
   const formData = new FormData();
   formData.append("file", file);
-
   try {
-    const response = await authenticatedFetch(MEDIA_API_BASE, {
+    const response = await authenticatedFetch(FILES_API, {
       method: "POST",
       body: formData,
     });
@@ -245,10 +264,10 @@ async function uploadMedia(event) {
     if (!response.ok) {
       throw new Error(data.error || "Upload failed");
     }
-
     elements.mediaForm.reset();
     setMediaMessage("File uploaded successfully.");
     await renderMediaFiles();
+    setTimeout(renderNotifications, 1500);
   } catch (error) {
     setMediaMessage(error.message, true);
   }
@@ -256,12 +275,11 @@ async function uploadMedia(event) {
 
 async function downloadMediaFile(fileId, fileName) {
   try {
-    const response = await authenticatedFetch(`${MEDIA_API_BASE}/${fileId}`);
+    const response = await authenticatedFetch(`${FILES_API}/${encodeURIComponent(fileId)}`);
     if (!response.ok) {
       const data = await readApiResponse(response);
       throw new Error(data.error || "Download failed");
     }
-
     const blob = await response.blob();
     const link = document.createElement("a");
     const objectUrl = URL.createObjectURL(blob);
@@ -279,25 +297,21 @@ async function downloadMediaFile(fileId, fileName) {
 async function registerUser(event) {
   event.preventDefault();
   setAuthMessage("");
-
   const payload = {
     fullName: document.getElementById("register-name").value.trim(),
     email: document.getElementById("register-email").value.trim(),
     password: document.getElementById("register-password").value,
   };
-
   try {
-    const response = await fetch(`${API_BASE}/register`, {
+    const response = await fetch(`${AUTH_API}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || data.message || "Registration failed");
     }
-
     setAuthMessage("Registration successful. You can now login.");
     elements.registerForm.reset();
     switchAuthTab("login");
@@ -309,26 +323,22 @@ async function registerUser(event) {
 async function loginUser(event) {
   event.preventDefault();
   setAuthMessage("");
-
   const payload = {
     email: document.getElementById("login-email").value.trim(),
     password: document.getElementById("login-password").value,
   };
-
   try {
-    const response = await fetch(`${API_BASE}/login`, {
+    const response = await fetch(`${AUTH_API}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || data.message || "Login failed");
     }
-
-    localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    localStorage.setItem(TOKEN_KEY, data.idToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user || {}));
     elements.loginForm.reset();
     await setLoggedInState();
   } catch (error) {
@@ -339,12 +349,10 @@ async function loginUser(event) {
 async function createReservation(event) {
   event.preventDefault();
   setReservationMessage("");
-
-  if (!loadUser() || !loadToken()) {
+  if (!loadToken()) {
     setReservationMessage("Please login first.", true);
     return;
   }
-
   const payload = {
     hallId: elements.hallSelect.value,
     date: document.getElementById("reservation-date").value,
@@ -353,32 +361,28 @@ async function createReservation(event) {
     attendees: Number(document.getElementById("reservation-attendees").value),
     purpose: document.getElementById("reservation-purpose").value.trim(),
   };
-
   if (!payload.date || !payload.start || !payload.end || !payload.purpose) {
     setReservationMessage("Fill in all reservation fields.", true);
     return;
   }
-
   if (payload.start >= payload.end) {
     setReservationMessage("End time must be after start time.", true);
     return;
   }
-
   try {
-    const response = await authenticatedFetch(RESERVATION_API_BASE, {
+    const response = await authenticatedFetch(RESERVATIONS_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error || data.message || "Failed to create reservation");
     }
-
     elements.reservationForm.reset();
     await renderReservations();
     setReservationMessage("Reservation created successfully.");
+    setTimeout(renderNotifications, 1500);
   } catch (error) {
     setReservationMessage(error.message, true);
   }
@@ -399,6 +403,7 @@ function bindEvents() {
   elements.reservationForm.addEventListener("submit", createReservation);
   elements.mediaForm.addEventListener("submit", uploadMedia);
   elements.logoutBtn.addEventListener("click", logout);
+  elements.refreshNotifications.addEventListener("click", renderNotifications);
 }
 
 renderHalls();
