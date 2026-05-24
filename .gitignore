@@ -1,8 +1,11 @@
+# Terraform
 infrastructure/.terraform/
 infrastructure/terraform.tfvars
 infrastructure/terraform.tfstate
 infrastructure/terraform.tfstate.*
 infrastructure/.terraform.tfstate.lock.info
+terraform.tfstate
+terraform.tfstate.*
 infrastructure/*.log
 infrastructure/*-events.json
 infrastructure/*-tail*.log
@@ -15,4 +18,13 @@ backend-v*.zip
 frontend-v*.zip
 infrastructure/backend-v*.zip
 infrastructure/frontend-v*.zip
+dist/
+
+# Backend
 backend/.env
+backend/server
+backend/*-tail*.log
+backend/cmd/*/server
+
+# Frontend
+frontend/.env

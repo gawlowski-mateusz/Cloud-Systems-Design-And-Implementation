@@ -1,6 +1,0 @@
-# Environment variables
-.env
-
-# Go test cache
-*.test
-*.out
