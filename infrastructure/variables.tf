@@ -5,30 +5,7 @@ variable "aws_region" {
 
   validation {
     condition     = var.aws_region == "us-east-1"
-    error_message = "This Terraform setup is locked to Learner Lab and must run in us-east-1."
-  }
-}
-
-variable "enable_cognito" {
-  description = "Whether to create and use Cognito resources"
-  type        = bool
-  default     = false
-}
-
-variable "manage_cloudwatch_log_groups" {
-  description = "Whether Terraform should manage dedicated CloudWatch log groups"
-  type        = bool
-  default     = false
-}
-
-variable "eb_instance_profile_name" {
-  description = "Pre-existing EC2 instance profile used by Elastic Beanstalk in Learner Lab"
-  type        = string
-  default     = "LabInstanceProfile"
-
-  validation {
-    condition     = var.eb_instance_profile_name == "LabInstanceProfile"
-    error_message = "This setup is locked to Learner Lab and must use the LabInstanceProfile instance profile."
+    error_message = "This setup is locked to AWS Academy Learner Lab and must run in us-east-1."
   }
 }
 
@@ -36,6 +13,18 @@ variable "project_name" {
   description = "Project slug used in AWS resource names"
   type        = string
   default     = "conference-app"
+}
+
+variable "lab_role_name" {
+  description = "Pre-existing IAM role provided by AWS Academy Learner Lab"
+  type        = string
+  default     = "LabRole"
+}
+
+variable "image_tag" {
+  description = "Container image tag deployed to ECS"
+  type        = string
+  default     = "latest"
 }
 
 variable "db_instance_class" {
@@ -56,34 +45,43 @@ variable "db_username" {
 }
 
 variable "db_password" {
-  description = "PostgreSQL admin password"
+  description = "PostgreSQL admin password (min 8 chars)"
   type        = string
   sensitive   = true
 }
 
-variable "media_bucket_name" {
-  description = "S3 bucket name for uploaded files"
-  type        = string
+variable "service_desired_count" {
+  description = "Desired number of running tasks per ECS service"
+  type        = number
+  default     = 2
 }
 
-variable "backend_version_label" {
-  description = "Elastic Beanstalk backend version label"
-  type        = string
-  default     = "v1"
+variable "service_min_capacity" {
+  description = "Min capacity for ECS service auto-scaling"
+  type        = number
+  default     = 2
 }
 
-variable "frontend_version_label" {
-  description = "Elastic Beanstalk frontend version label"
-  type        = string
-  default     = "v1"
+variable "service_max_capacity" {
+  description = "Max capacity for ECS service auto-scaling"
+  type        = number
+  default     = 4
 }
 
-variable "backend_source_bundle_key" {
-  description = "S3 object key with backend deployment bundle"
+variable "task_cpu" {
+  description = "Fargate task CPU units (256 = 0.25 vCPU)"
   type        = string
+  default     = "256"
 }
 
-variable "frontend_source_bundle_key" {
-  description = "S3 object key with frontend deployment bundle"
+variable "task_memory" {
+  description = "Fargate task memory in MiB"
   type        = string
+  default     = "512"
+}
+
+variable "enable_sns_subscription" {
+  description = "Create the SNS->ALB HTTP subscription. Set to true only after ECS services are running (runningCount=2), so SNS can auto-confirm by POSTing to /notifications/sns."
+  type        = bool
+  default     = false
 }
