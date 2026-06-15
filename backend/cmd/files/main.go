@@ -9,13 +9,13 @@ import (
 
 	"neurosciolar/backend/internal/awsclients"
 	"neurosciolar/backend/internal/dynamostore"
+	"neurosciolar/backend/internal/events"
 	"neurosciolar/backend/internal/files"
-	"neurosciolar/backend/internal/notifications"
 	"neurosciolar/backend/internal/sharedauth"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/sns"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -27,14 +27,14 @@ func main() {
 	}
 	s3Client := s3.NewFromConfig(cfg)
 	dynamoClient := dynamodb.NewFromConfig(cfg)
-	snsClient := sns.NewFromConfig(cfg)
+	sqsClient := sqs.NewFromConfig(cfg)
 
 	bucket := requireEnv("S3_MEDIA_BUCKET")
 	metadataTable := requireEnv("DYNAMO_FILES_TABLE")
-	topicARN := strings.TrimSpace(os.Getenv("SNS_TOPIC_ARN"))
+	queueURL := requireEnv("SQS_QUEUE_URL")
 
 	store := dynamostore.NewFileMetadataStore(dynamoClient, metadataTable)
-	publisher := notifications.NewPublisher(snsClient, topicARN)
+	publisher := events.NewPublisher(sqsClient, queueURL)
 	handler := files.NewHandler(s3Client, bucket, store, publisher)
 
 	validator, err := sharedauth.NewValidator()

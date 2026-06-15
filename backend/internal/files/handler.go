@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"neurosciolar/backend/internal/dynamostore"
-	"neurosciolar/backend/internal/notifications"
+	"neurosciolar/backend/internal/events"
 	"neurosciolar/backend/internal/sharedauth"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -27,10 +27,10 @@ type Handler struct {
 	s3        *s3.Client
 	bucket    string
 	store     *dynamostore.FileMetadataStore
-	publisher *notifications.Publisher
+	publisher *events.Publisher
 }
 
-func NewHandler(s3Client *s3.Client, bucket string, store *dynamostore.FileMetadataStore, publisher *notifications.Publisher) *Handler {
+func NewHandler(s3Client *s3.Client, bucket string, store *dynamostore.FileMetadataStore, publisher *events.Publisher) *Handler {
 	return &Handler{s3: s3Client, bucket: bucket, store: store, publisher: publisher}
 }
 
@@ -109,7 +109,7 @@ func (h *Handler) Upload(c *gin.Context) {
 		go func(sub, body string) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = h.publisher.Publish(ctx, notifications.Event{
+			_ = h.publisher.Publish(ctx, events.Event{
 				EventType: "FileUploaded",
 				UserSub:   sub,
 				Payload:   body,

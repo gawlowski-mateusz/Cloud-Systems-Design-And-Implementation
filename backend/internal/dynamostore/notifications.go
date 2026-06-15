@@ -2,6 +2,7 @@ package dynamostore
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -15,6 +16,7 @@ const BroadcastUserSub = "*"
 type Notification struct {
 	UserSub   string `json:"userSub"   dynamodbav:"user_sub"`
 	EventTs   string `json:"eventTs"   dynamodbav:"event_ts"`
+	EventID   string `json:"eventId"   dynamodbav:"event_id"`
 	EventType string `json:"eventType" dynamodbav:"event_type"`
 	Payload   string `json:"payload"   dynamodbav:"payload"`
 	CreatedAt string `json:"createdAt" dynamodbav:"created_at"`
@@ -29,7 +31,11 @@ func NewNotificationStore(client *dynamodb.Client, table string) *NotificationSt
 	return &NotificationStore{client: client, table: table}
 }
 
-func (s *NotificationStore) Put(ctx context.Context, n Notification) error {
+// Put stores a notification idempotently. The (user_sub, event_ts) key is stamped
+// by the producer and carried in the SQS message, so a re-delivered message maps
+// to the same item. The conditional write reports (false, nil) on a duplicate,
+// letting the consumer delete the message without creating a second notification.
+func (s *NotificationStore) Put(ctx context.Context, n Notification) (bool, error) {
 	if n.EventTs == "" {
 		n.EventTs = time.Now().UTC().Format(time.RFC3339Nano)
 	}
@@ -41,13 +47,21 @@ func (s *NotificationStore) Put(ctx context.Context, n Notification) error {
 	}
 	item, err := attributevalue.MarshalMap(n)
 	if err != nil {
-		return err
+		return false, err
 	}
 	_, err = s.client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(s.table),
-		Item:      item,
+		TableName:           aws.String(s.table),
+		Item:                item,
+		ConditionExpression: aws.String("attribute_not_exists(user_sub)"),
 	})
-	return err
+	if err != nil {
+		var conflict *dtypes.ConditionalCheckFailedException
+		if errors.As(err, &conflict) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (s *NotificationStore) ListByUser(ctx context.Context, userSub string, limit int32) ([]Notification, error) {

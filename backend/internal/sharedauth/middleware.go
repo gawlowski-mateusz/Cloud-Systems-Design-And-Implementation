@@ -44,6 +44,46 @@ func NewValidator() (*Validator, error) {
 	return v, nil
 }
 
+// ValidateToken verifies a raw Cognito id token (signature, issuer, audience,
+// token_use) and returns its subject and email. Shared by the Gin middleware and
+// the WebSocket Lambda authorizer, which cannot reuse the gin.Context flow.
+func (v *Validator) ValidateToken(raw string) (sub, email string, err error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", "", errors.New("empty token")
+	}
+
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(raw, claims, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %s", t.Method.Alg())
+		}
+		kid, _ := t.Header["kid"].(string)
+		if kid == "" {
+			return nil, errors.New("token missing kid header")
+		}
+		return v.keys.Key(kid)
+	})
+	if err != nil || token == nil || !token.Valid {
+		return "", "", errors.New("invalid or expired token")
+	}
+	if iss, _ := claims["iss"].(string); iss != v.issuer {
+		return "", "", errors.New("invalid token issuer")
+	}
+	if tokenUse, _ := claims["token_use"].(string); tokenUse != "id" {
+		return "", "", errors.New("token must be an id token")
+	}
+	if aud, _ := claims["aud"].(string); aud != v.clientID {
+		return "", "", errors.New("invalid token audience")
+	}
+	sub, _ = claims["sub"].(string)
+	if sub == "" {
+		return "", "", errors.New("token missing subject")
+	}
+	email, _ = claims["email"].(string)
+	return sub, email, nil
+}
+
 func (v *Validator) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -56,48 +96,15 @@ func (v *Validator) Middleware() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
 			return
 		}
-		raw := strings.TrimSpace(parts[1])
-		if raw == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "empty bearer token"})
-			return
-		}
 
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(raw, claims, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %s", t.Method.Alg())
-			}
-			kid, _ := t.Header["kid"].(string)
-			if kid == "" {
-				return nil, errors.New("token missing kid header")
-			}
-			return v.keys.Key(kid)
-		})
-		if err != nil || token == nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
-			return
-		}
-
-		if iss, _ := claims["iss"].(string); iss != v.issuer {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token issuer"})
-			return
-		}
-		if tokenUse, _ := claims["token_use"].(string); tokenUse != "id" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token must be an id token"})
-			return
-		}
-		if aud, _ := claims["aud"].(string); aud != v.clientID {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token audience"})
-			return
-		}
-		sub, _ := claims["sub"].(string)
-		if sub == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token missing subject"})
+		sub, email, err := v.ValidateToken(parts[1])
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
 		c.Set(ContextUserSubKey, sub)
-		if email, ok := claims["email"].(string); ok {
+		if email != "" {
 			c.Set(ContextEmailKey, email)
 		}
 		c.Next()
