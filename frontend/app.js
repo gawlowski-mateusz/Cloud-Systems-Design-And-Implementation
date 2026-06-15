@@ -1,8 +1,13 @@
 const API_ROOT = (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL
   ? window.APP_CONFIG.API_BASE_URL
   : "http://localhost:8080").replace(/\/$/, "");
+// Reservations are served by API Gateway (Lambda), not the ALB. Fall back to the
+// ALB root for local dev where everything is proxied together.
+const RESERVATIONS_API_ROOT = (window.APP_CONFIG && window.APP_CONFIG.RESERVATIONS_API_URL
+  ? window.APP_CONFIG.RESERVATIONS_API_URL
+  : API_ROOT).replace(/\/$/, "");
 const AUTH_API = `${API_ROOT}/auth`;
-const RESERVATIONS_API = `${API_ROOT}/reservations`;
+const RESERVATIONS_API = `${RESERVATIONS_API_ROOT}/reservations`;
 const FILES_API = `${API_ROOT}/files`;
 const NOTIFICATIONS_API = `${API_ROOT}/notifications`;
 const TOKEN_KEY = "conference_app_id_token";
