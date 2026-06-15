@@ -1,4 +1,5 @@
-# Build and push 4 service images to ECR (Windows PowerShell).
+# Build and push the Fargate service images to ECR (Windows PowerShell).
+# reservations is gone — it now runs as Lambda (see scripts/build-lambdas.ps1).
 # Usage:
 #   cd repo-root
 #   ./scripts/build-and-push.ps1            # uses default project name + latest tag
@@ -8,7 +9,7 @@ param(
     [string]$ProjectName = "conference-app",
     [string]$Region = "us-east-1",
     [string]$Tag = "latest",
-    [string[]]$Services = @("auth", "reservations", "files", "notifications")
+    [string[]]$Services = @("auth", "files", "notifications")
 )
 
 $ErrorActionPreference = "Stop"

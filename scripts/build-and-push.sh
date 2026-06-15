@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Build and push 4 service images to ECR (bash, Linux/macOS/Git Bash).
+# Build and push the Fargate service images to ECR (bash, Linux/macOS/Git Bash).
+# reservations is gone — it now runs as Lambda (see scripts/build-lambdas.sh).
 set -euo pipefail
 
 PROJECT_NAME="${PROJECT_NAME:-conference-app}"
 REGION="${REGION:-us-east-1}"
 TAG="${TAG:-latest}"
-SERVICES=(auth reservations files notifications)
+SERVICES=(auth files notifications)
 
 echo "Resolving AWS account id..."
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text | tr -d '[:space:]')"

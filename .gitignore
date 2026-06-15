@@ -1,5 +1,7 @@
 # Terraform
 infrastructure/.terraform/
+# Compiled Lambda bootstrap binaries + zip packages produced by build-lambdas.*
+infrastructure/build/
 infrastructure/terraform.tfvars
 infrastructure/terraform.tfstate
 infrastructure/terraform.tfstate.*
