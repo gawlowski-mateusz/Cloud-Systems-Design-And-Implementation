@@ -27,29 +27,6 @@ variable "image_tag" {
   default     = "latest"
 }
 
-variable "db_instance_class" {
-  description = "RDS instance class"
-  type        = string
-  default     = "db.t3.micro"
-}
-
-variable "db_name" {
-  description = "PostgreSQL database name"
-  type        = string
-  default     = "conference"
-}
-
-variable "db_username" {
-  description = "PostgreSQL admin username"
-  type        = string
-}
-
-variable "db_password" {
-  description = "PostgreSQL admin password (min 8 chars)"
-  type        = string
-  sensitive   = true
-}
-
 variable "service_desired_count" {
   description = "Desired number of running tasks per ECS service"
   type        = number
@@ -80,8 +57,23 @@ variable "task_memory" {
   default     = "512"
 }
 
-variable "enable_sns_subscription" {
-  description = "Create the SNS->ALB HTTP subscription. Set to true only after ECS services are running (runningCount=2), so SNS can auto-confirm by POSTing to /notifications/sns."
-  type        = bool
-  default     = false
+variable "lambda_log_retention_days" {
+  description = "Retention for the reservation Lambda log groups"
+  type        = number
+  default     = 3
+}
+
+variable "sqs_max_receive_count" {
+  description = "Deliveries attempted before a message is moved to the Dead Letter Queue"
+  type        = number
+  default     = 5
+}
+
+variable "notification_email" {
+  description = <<-EOT
+    Address subscribed to the notification SNS topic (use the email you log in
+    with). After apply, confirm the subscription via the link SNS sends, otherwise
+    no emails are delivered.
+  EOT
+  type        = string
 }

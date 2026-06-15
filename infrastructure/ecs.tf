@@ -23,23 +23,16 @@ locals {
     auth = merge(local.shared_env, {
       DYNAMO_PROFILES_TABLE = aws_dynamodb_table.auth_profiles.name
     })
-    reservations = merge(local.shared_env, {
-      DB_HOST       = aws_db_instance.postgres.address
-      DB_PORT       = "5432"
-      DB_USER       = var.db_username
-      DB_PASSWORD   = var.db_password
-      DB_NAME       = var.db_name
-      DB_SSLMODE    = "require"
-      SNS_TOPIC_ARN = aws_sns_topic.app_events.arn
-    })
     files = merge(local.shared_env, {
       S3_MEDIA_BUCKET    = aws_s3_bucket.media.bucket
       DYNAMO_FILES_TABLE = aws_dynamodb_table.file_metadata.name
-      SNS_TOPIC_ARN      = aws_sns_topic.app_events.arn
+      SQS_QUEUE_URL      = aws_sqs_queue.app_events.url
     })
     notifications = merge(local.shared_env, {
       DYNAMO_NOTIFICATIONS_TABLE = aws_dynamodb_table.notification_history.name
-      SNS_TOPIC_ARN              = aws_sns_topic.app_events.arn
+      SQS_QUEUE_URL              = aws_sqs_queue.app_events.url
+      # Email delivery: consumer publishes each event to this SNS topic.
+      NOTIFICATIONS_TOPIC_ARN = aws_sns_topic.notifications.arn
     })
   }
 }

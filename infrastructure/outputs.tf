@@ -18,9 +18,9 @@ output "cognito_client_id" {
   value       = aws_cognito_user_pool_client.app.id
 }
 
-output "rds_endpoint" {
-  description = "PostgreSQL RDS endpoint"
-  value       = aws_db_instance.postgres.address
+output "reservations_api_url" {
+  description = "API Gateway base URL for the reservation Lambdas (frontend RESERVATIONS_API_URL)"
+  value       = aws_apigatewayv2_stage.default.invoke_url
 }
 
 output "media_bucket" {
@@ -28,9 +28,19 @@ output "media_bucket" {
   value       = aws_s3_bucket.media.bucket
 }
 
-output "sns_topic_arn" {
-  description = "SNS topic ARN for app events"
-  value       = aws_sns_topic.app_events.arn
+output "sqs_queue_url" {
+  description = "Main application events queue URL"
+  value       = aws_sqs_queue.app_events.url
+}
+
+output "sqs_dlq_url" {
+  description = "Dead Letter Queue URL"
+  value       = aws_sqs_queue.app_events_dlq.url
+}
+
+output "notification_topic_arn" {
+  description = "SNS topic that emails notification subscribers"
+  value       = aws_sns_topic.notifications.arn
 }
 
 output "ecs_cluster_name" {

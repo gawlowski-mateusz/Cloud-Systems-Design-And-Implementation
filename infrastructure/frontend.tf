@@ -81,6 +81,7 @@ resource "aws_s3_object" "frontend_config" {
 
   content = templatefile("${path.module}/templates/config.js.tftpl", {
     api_base_url         = "http://${aws_lb.main.dns_name}"
+    reservations_api_url = aws_apigatewayv2_stage.default.invoke_url
     cognito_user_pool_id = aws_cognito_user_pool.app.id
     cognito_client_id    = aws_cognito_user_pool_client.app.id
     aws_region           = var.aws_region

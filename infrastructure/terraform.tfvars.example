@@ -1,12 +1,6 @@
 aws_region   = "us-east-1"
 project_name = "conference-app"
 
-# RDS PostgreSQL (reservations service)
-db_instance_class = "db.t3.micro"
-db_name           = "conference"
-db_username       = "conference_admin"
-db_password       = "ChangeThisStrongPassword123!"
-
 # Container image tag pushed to ECR via scripts/build-and-push.ps1
 image_tag = "latest"
 
@@ -16,3 +10,11 @@ service_min_capacity  = 2
 service_max_capacity  = 4
 task_cpu              = "256"
 task_memory           = "512"
+
+# Event pipeline
+sqs_max_receive_count     = 5
+lambda_log_retention_days = 3
+
+# Email notifications (SNS). Address subscribed to the notifications topic; use
+# the email you log in with and confirm the subscription link after apply.
+notification_email = "you@example.com"

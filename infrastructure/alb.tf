@@ -26,9 +26,10 @@ locals {
   # subpath wildcard ("/reservations/*"). The bare prefix is required because ALB
   # path patterns of the form "/foo/*" do not match "/foo" — and the frontend hits
   # bare URLs like GET /reservations to list items.
+  # reservations is intentionally absent: it now runs as Lambda behind API Gateway
+  # (see lambda.tf / apigateway.tf), not as a Fargate service behind this ALB.
   services = {
     auth          = { paths = ["/auth", "/auth/*"], health = "/auth/health", priority = 10 }
-    reservations  = { paths = ["/reservations", "/reservations/*"], health = "/reservations/health", priority = 20 }
     files         = { paths = ["/files", "/files/*"], health = "/files/health", priority = 30 }
     notifications = { paths = ["/notifications", "/notifications/*"], health = "/notifications/health", priority = 40 }
   }
